@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "rootDir": "src",
+    "outDir": ".preview-dist",
+    "strict": true,
+    "declaration": false,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "src/app/motion/boxingArtwork.ts",
+    "src/app/motion/coachPresentation.ts",
+    "src/app/motion/firstPersonPresentation.ts",
+    "src/app/motion/buildBoxerRig.ts",
+    "src/app/session/P0AttackAttemptController.ts",
+    "src/app/session/P0SingleAttackSession.ts",
+    "src/app/session/leadJabSessionConfig.ts",
+    "src/app/session/P0ThreeSingleAttackSession.ts",
+    "src/app/session/P0TenPunchSession.ts",
+    "src/app/session/RoundClock.ts",
+    "src/app/session/seededComboOrder.ts"
+  ]
+}

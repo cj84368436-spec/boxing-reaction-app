@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "attribution": {
+    "text": "The data used in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217.",
+    "url": "https://mocap.cs.cmu.edu"
+  },
+  "sources": [
+    {
+      "attackId": "LEAD_JAB_HEAD",
+      "attackName": "Lead Jab",
+      "motionAsset": "src/game/assets/motion/lead-jab.json",
+      "subject": 144,
+      "trial": 13,
+      "asfUrl": "https://mocap.cs.cmu.edu/subjects/144/144.asf",
+      "amcUrl": "https://mocap.cs.cmu.edu/subjects/144/144_13.amc",
+      "sourceFilename": "144_13.amc",
+      "sourceFps": 120,
+      "frameRange": { "start": 1076, "end": 1156 },
+      "canonicalTiming": {
+        "cueAnchorMs": 120,
+        "impactMs": 480,
+        "responseWindowStartMs": 120,
+        "responseWindowEndMs": 450
+      },
+      "anchors": {
+        "ready":          { "sourceFrame": 1076, "timeMs": 0 },
+        "visualCue":      { "sourceFrame": 1092, "timeMs": 120 },
+        "visualImpact":   { "sourceFrame": 1116, "timeMs": 480 },
+        "visualRecovery": { "sourceFrame": 1156, "timeMsNonCanonical": 760,
+                            "note": "Animation source anchor only. Not game canonical timing. Separate from p0Sequence.recoveryAfterMs." }
+      },
+      "asfSha256": "99d2d33666408903424f0ff3fca2ad6f1641eee29d10611eec46585a867563f2",
+      "amcSha256": "a80936acae23821eb0a575614c7cf282518bf2be30fd14b3983dc8d8351d897d"
+    },
+    {
+      "attackId": "REAR_STRAIGHT_HEAD",
+      "attackName": "Rear Straight",
+      "motionAsset": "src/game/assets/motion/rear-straight.json",
+      "subject": 144,
+      "trial": 20,
+      "asfUrl": "https://mocap.cs.cmu.edu/subjects/144/144.asf",
+      "amcUrl": "https://mocap.cs.cmu.edu/subjects/144/144_20.amc",
+      "sourceFilename": "144_20.amc",
+      "sourceFps": 120,
+      "frameRange": { "start": 470, "end": 540 },
+      "canonicalTiming": {
+        "cueAnchorMs": 150,
+        "impactMs": 540,
+        "responseWindowStartMs": 150,
+        "responseWindowEndMs": 510
+      },
+      "anchors": {
+        "ready":          { "sourceFrame": 470, "timeMs": 0 },
+        "visualCue":      { "sourceFrame": 484, "timeMs": 150 },
+        "visualImpact":   { "sourceFrame": 505, "timeMs": 540 },
+        "visualRecovery": { "sourceFrame": 538, "timeMsNonCanonical": 820,
+                            "note": "Animation source anchor only. Not game canonical timing. Separate from p0Sequence.recoveryAfterMs." }
+      },
+      "asfSha256": "99d2d33666408903424f0ff3fca2ad6f1641eee29d10611eec46585a867563f2",
+      "amcSha256": "42d62fa9474f86d8ab77c9bee5cf1133c8b30aaffa62ef7a851832522f031587"
+    },
+    {
+      "attackId": "LEAD_HOOK_HEAD",
+      "attackName": "Lead Hook",
+      "motionAsset": "src/game/assets/motion/lead-hook.json",
+      "subject": 14,
+      "trial": 1,
+      "asfUrl": "https://mocap.cs.cmu.edu/subjects/14/14.asf",
+      "amcUrl": "https://mocap.cs.cmu.edu/subjects/14/14_01.amc",
+      "sourceFilename": "14_01.amc",
+      "sourceFps": 120,
+      "frameRange": { "start": 244, "end": 315 },
+      "canonicalTiming": {
+        "cueAnchorMs": 190,
+        "impactMs": 620,
+        "responseWindowStartMs": 190,
+        "responseWindowEndMs": 590
+      },
+      "anchors": {
+        "ready":          { "sourceFrame": 244, "timeMs": 0 },
+        "visualCue":      { "sourceFrame": 256, "timeMs": 190 },
+        "visualImpact":   { "sourceFrame": 275, "timeMs": 620 },
+        "visualRecovery": { "sourceFrame": 314, "timeMsNonCanonical": 900,
+                            "note": "Animation source anchor only. Not game canonical timing. Separate from p0Sequence.recoveryAfterMs." }
+      },
+      "asfSha256": "96a22ac52ac15bd464c296028936be0ae7d2f0ee4a056202b1aa17f4ad02ec7f",
+      "amcSha256": "a2648d51ea42461d8667557f8721fa8ff8463341838defdf7c2d32a96f19cba5"
+    }
+  ]
+}

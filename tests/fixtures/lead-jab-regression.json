@@ -1,0 +1,49 @@
+{
+  "description": "Lead Jab FK regression fixture — Codex reference commit dfea2a16bfe93264e85853fefbde80326f5368ab",
+  "attackId": "LEAD_JAB_HEAD",
+  "source": "144_13",
+  "tolerance": 0.01,
+  "note": "FK axis/dof regression detects errors of 0.3-6.0 units. tolerance=0.01 allows float rounding (<1e-5) only.",
+  "joints": ["pelvis", "chest", "lShoulder", "rShoulder", "lHand", "rHand"],
+  "snapshots": [
+    {
+      "label": "ready",
+      "sourceFrame": 1076,
+      "timeMs": 0,
+      "values": {
+        "pelvis":    [-0.837630, 5.276340, 2.153803],
+        "chest":     [-0.593167, 7.616173, 3.735304],
+        "lShoulder": [ 0.670763, 8.301315, 3.424241],
+        "rShoulder": [-1.637324, 7.801144, 4.707243],
+        "lHand":     [ 1.029725, 7.943403, 4.795520],
+        "rHand":     [-0.720974, 8.165908, 5.794538]
+      }
+    },
+    {
+      "label": "cue",
+      "sourceFrame": 1092,
+      "timeMs": 120,
+      "values": {
+        "pelvis":    [-0.878350, 4.769505, 2.116440],
+        "chest":     [-0.415484, 7.057552, 3.724214],
+        "lShoulder": [ 0.735671, 7.805555, 3.195982],
+        "rShoulder": [-1.245576, 7.162239, 4.894314],
+        "lHand":     [ 1.369172, 7.291013, 4.522043],
+        "rHand":     [-0.167985, 7.657608, 5.827831]
+      }
+    },
+    {
+      "label": "impact",
+      "sourceFrame": 1116,
+      "timeMs": 480,
+      "values": {
+        "pelvis":    [-0.550125, 4.340156, 2.064051],
+        "chest":     [-0.384467, 6.696551, 3.630247],
+        "lShoulder": [ 0.905563, 6.801716, 4.329147],
+        "rShoulder": [-1.612208, 7.445953, 3.644082],
+        "lHand":     [ 1.158558, 5.835858, 8.217368],
+        "rHand":     [-1.285832, 7.493151, 5.201744]
+      }
+    }
+  ]
+}

@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>P0 Motion Validation Viewer</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070b11;
+      --panel: #0b121c;
+      --panel-alt: #121c2b;
+      --border: #1f2b3e;
+      --text: #f1f2f6;
+      --muted: #8e99a8;
+      --accent: #ff4757;
+      --cue: #62d8ff;
+      --impact: #ffcf52;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 16px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    main { width: min(1080px, 100%); margin: 0 auto; }
+    header { margin-bottom: 12px; }
+    h1 { margin: 0 0 4px; font-size: 1.3rem; }
+    header p, #sourceSummary { margin: 0; color: var(--muted); font-size: 0.8rem; }
+    .panel {
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel);
+      box-shadow: 0 14px 40px rgb(0 0 0 / 35%);
+    }
+    .tabs { display: grid; grid-template-columns: repeat(3, 1fr); }
+    button, select {
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: #172437;
+      color: var(--text);
+      font: inherit;
+      cursor: pointer;
+    }
+    .tabs button {
+      min-height: 48px;
+      border-width: 0 0 3px;
+      border-radius: 0;
+      background: #080e17;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .tabs button.active { border-bottom-color: var(--accent); background: #0e1724; color: white; }
+    .views { display: grid; grid-template-columns: 1fr 1fr; background: #070b11; }
+    .view { position: relative; min-width: 0; border-top: 1px solid var(--border); }
+    .view:first-child { border-right: 1px solid var(--border); }
+    .view-label {
+      position: absolute;
+      z-index: 1;
+      top: 10px;
+      left: 12px;
+      padding: 4px 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: rgb(11 18 28 / 90%);
+      color: var(--cue);
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    canvas { display: block; width: 100%; height: auto; }
+    .meta, .presets, .settings, .controls { padding: 10px 14px; border-top: 1px solid var(--border); }
+    .meta { display: flex; justify-content: space-between; gap: 12px; background: var(--panel-alt); }
+    #status { color: var(--accent); font-family: ui-monospace, monospace; font-weight: 700; }
+    .presets { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; background: var(--panel-alt); }
+    .presets button { min-height: 48px; padding: 5px; font-size: 0.72rem; }
+    .presets button strong, .presets button span { display: block; }
+    .presets button span { margin-top: 2px; color: var(--muted); font-size: 0.65rem; }
+    .presets button.active { border-color: var(--accent); background: rgb(255 71 87 / 18%); }
+    .settings, .controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .settings { justify-content: space-between; }
+    .group { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 0.78rem; }
+    .group button, .controls button, select { padding: 7px 11px; }
+    button.active, #play { border-color: var(--accent); }
+    #play { background: var(--accent); }
+    .timeline {
+      position: relative;
+      height: 14px;
+      margin: 12px 14px 2px;
+      overflow: hidden;
+      border-radius: 7px;
+      background: #172437;
+      cursor: pointer;
+    }
+    #cueRegion, #impactMarker, #playhead { position: absolute; top: 0; bottom: 0; }
+    #cueRegion { background: rgb(98 216 255 / 25%); border-inline: 2px solid var(--cue); }
+    #impactMarker { width: 4px; background: var(--impact); transform: translateX(-50%); }
+    #playhead { left: 0; width: 0; background: rgb(255 255 255 / 24%); pointer-events: none; }
+    .note { margin-top: 12px; color: var(--muted); font-size: 0.78rem; line-height: 1.5; }
+    code { color: var(--cue); }
+    @media (max-width: 760px) {
+      body { padding: 8px; }
+      .views { grid-template-columns: 1fr; }
+      .view:first-child { border-right: 0; }
+      .presets { grid-template-columns: repeat(3, 1fr); }
+      .meta { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>P0 Mocap 3대 공격 검증 뷰어</h1>
+      <p>canonical motion JSON 직접 로드 · 정면 2.5D / 45도 측면 동시 비교</p>
+    </header>
+    <section class="panel">
+      <nav class="tabs" aria-label="공격 선택">
+        <button class="active" data-attack="jab">Lead Jab</button>
+        <button data-attack="straight">Rear Straight</button>
+        <button data-attack="hook">Lead Hook</button>
+      </nav>
+      <div class="views">
+        <div class="view">
+          <span class="view-label">정면 2.5D</span>
+          <canvas id="frontCanvas" width="540" height="480"></canvas>
+        </div>
+        <div class="view">
+          <span class="view-label">45도 측면</span>
+          <canvas id="quarterCanvas" width="540" height="480"></canvas>
+        </div>
+      </div>
+      <div class="meta">
+        <span id="sourceSummary">motion asset 로딩 중</span>
+        <span id="status">초기화 중</span>
+      </div>
+      <div class="presets" id="presets" aria-label="핵심 정지 시점"></div>
+      <div class="settings">
+        <div class="group">
+          <span>글러브 깊이 강조</span>
+          <button class="active" data-glove-scale="1">1.0x</button>
+          <button data-glove-scale="1.5">1.5x</button>
+        </div>
+        <label class="group">재생 속도
+          <select id="speed">
+            <option value="0.25">0.25x</option>
+            <option value="0.5">0.5x</option>
+            <option value="1" selected>1.0x</option>
+          </select>
+        </label>
+      </div>
+      <div class="timeline" id="timeline" aria-label="모션 타임라인">
+        <div id="cueRegion"></div>
+        <div id="impactMarker"></div>
+        <div id="playhead"></div>
+      </div>
+      <div class="controls">
+        <button id="play">▶ 재생</button>
+        <button id="stepBack">⏮ -1F</button>
+        <button id="stepForward">⏭ +1F</button>
+        <button id="loop" class="active">🔁 반복 On</button>
+      </div>
+    </section>
+    <p class="note">
+      저장소 루트에서 <code>python -m http.server 4173</code> 실행 후 이 페이지를 여세요.
+      시각 품질은 자동 PASS 대상이 아니며, 공격 구별성·원근 단축·회수 동작은 사용자가 직접 판정합니다.
+    </p>
+  </main>
+  <script type="module" src="./viewer-app.mjs"></script>
+</body>
+</html>
