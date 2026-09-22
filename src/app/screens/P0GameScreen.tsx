@@ -10,6 +10,7 @@ import { getCoachMoment, getRematchReview } from '../motion/coachPresentation';
 import { candidateFailureReason } from '../session/candidateRules';
 import { COACH_INTRO } from '../motion/boxingArtwork';
 import { DefenseControls } from '../components/DefenseControls';
+import { type DefenseControlMode } from '../session/advancedDefense';
 import {
   TemporarySfxPlayer,
   type PlaytestSoundCue,
@@ -34,6 +35,11 @@ const TOTAL_PUNCHES = 10;
 // SDK 2.x TopTransparentNavigation overlays a 44-point row below the safe area.
 const HOST_NAVIGATION_HEIGHT = 44;
 const MOTION_ASSETS = Object.fromEntries(Object.keys(getP0MotionSourceIds()).map(id => [id, getP0MotionAsset(id)]));
+const INPUT_LABELS: Record<DefenseInput, string> = {
+  LEFT:'왼쪽 회피', RIGHT:'오른쪽 회피', BACK:'뒤로 피하기', GUARD:'가드',
+  SLIP_LEFT:'좌 슬립', SLIP_RIGHT:'우 슬립', WEAVE_LEFT:'좌 위빙',
+  WEAVE_RIGHT:'우 위빙', SWAY:'스웨이',
+};
 
 function isDefenseWindowOpen(snapshot: TenPunchSessionSnapshot): boolean {
   const attack = snapshot.currentAttack;
@@ -75,7 +81,7 @@ function attackLabel(attackId: string): string {
 
 function resultDescription(result: TenPunchSessionResult): string {
   const button = result.telemetry.inputButton;
-  const input = button == null ? '입력 없음' : {LEFT:'왼쪽 회피', RIGHT:'오른쪽 회피', BACK:'뒤로 피하기', GUARD:'가드'}[button];
+  const input = button == null ? '입력 없음' : INPUT_LABELS[button];
   const reason = result.outcome === 'PERFECT' ? '완벽하게 피함' : result.outcome === 'SAFE' ? '안전하게 방어' :
     result.telemetry.inputStatus === 'VALID' ? candidateFailureReason(result.attackId,button) :
     ({NO_INPUT:'누르지 않아 맞음', EARLY:'너무 일찍 누름', LATE:'늦게 누름', MULTI_INPUT:'버튼을 동시에 누름'} as Record<string,string>)[result.telemetry.inputStatus] ?? '방어 실패';
@@ -101,10 +107,12 @@ export function P0GameScreen({
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [foreground, setForeground] = useState(true);
   const [speed, setSpeed] = useState<number>(ROUND_SPEEDS.relaxed);
+  const [controlMode, setControlMode] = useState<DefenseControlMode>('BEGINNER');
   const [notice, setNotice] = useState<{text: string; until: number} | null>(null);
   const [initialSession] = useState(() =>
     new P0TenPunchSession(roundClock, getP0MotionSourceIds(), {
       ruleset: 'candidate',
+      controlMode,
       ...(seed == null ? {} : { seed }),
     }),
   );
@@ -147,6 +155,15 @@ export function P0GameScreen({
     return () => { subscription.remove(); blur.remove(); focus.remove(); };
   }, [pauseRound]);
 
+  const selectControlMode = (mode: DefenseControlMode) => {
+    if (startedRef.current) return;
+    setControlMode(mode);
+    sessionRef.current = new P0TenPunchSession(clockRef.current, getP0MotionSourceIds(), {
+      ruleset: 'candidate', controlMode: mode, ...(seed == null ? {} : { seed }),
+    });
+    setSnapshot(sessionRef.current.snapshot());
+  };
+
   const begin = (rate: number) => {
     if (startedRef.current) return;
     startedRef.current = true;
@@ -179,7 +196,7 @@ export function P0GameScreen({
     if (receipt.status === 'VALID' && !acceptedAt.current.has(receipt.targetAttackInstanceId)) {
       acceptedAt.current.set(receipt.targetAttackInstanceId, receipt.atMs);
     }
-    if (receipt.status === 'VALID') setNotice({text: ({LEFT:'왼쪽 회피',RIGHT:'오른쪽 회피',BACK:'거리 빼기',GUARD:'가드'})[receipt.input] + ' · 동작 중', until:clockRef.current.nowMs()+160});
+    if (receipt.status === 'VALID') setNotice({text: INPUT_LABELS[receipt.input] + ' · 동작 중', until:clockRef.current.nowMs()+160});
     if (receipt.status !== 'VALID') setNotice({text: receipt.status === 'EARLY' ? '너무 빠름 · 복귀 뒤 다시 입력' : receipt.status === 'LATE' ? '조금 더 일찍 눌러보세요' : '버튼 하나만 눌러주세요', until:clockRef.current.nowMs()+200});
     setSnapshot(sessionRef.current.snapshot());
   };
@@ -275,10 +292,16 @@ export function P0GameScreen({
           <ScrollView contentContainerStyle={[styles.introContent, compact && styles.introCompact]}>
             <CoachReaction reaction={COACH_INTRO} />
             <Text style={styles.introTitle}>주먹을 보고, 피하세요.</Text>
-            <Text style={styles.introBody}>화면 아래 버튼을 눌러 피하세요.{"\n"}짧은 잽은 좌우, 어깨를 젖히는 뒷손은 왼쪽.{"\n"}팔을 벌려 옆으로 오는 훅은 오른쪽으로 숙이세요.</Text>
+            <Text style={styles.introBody}>{controlMode === 'ADVANCED'
+              ? <>기술을 직접 골라 방어하세요.{"\n"}잽은 좌우 슬립, 뒷손 스트레이트는 좌 슬립.{"\n"}리드 훅은 우 위빙이 정확합니다.</>
+              : <>화면 아래 버튼을 눌러 피하세요.{"\n"}짧은 잽은 좌우, 어깨를 젖히는 뒷손은 왼쪽.{"\n"}팔을 벌려 옆으로 오는 훅은 오른쪽으로 숙이세요.</>}</Text>
             <Text style={styles.introBody}>가드는 두 번, 회피하면 한 칸 회복.{"\n"}스트레이트는 뒤로 빠져도 닿아요.</Text>
           </ScrollView>
           <View style={styles.introActions}>
+            <View style={styles.modeRow}>
+              <Pressable accessibilityRole="button" accessibilityLabel="초보 4버튼" accessibilityState={{selected:controlMode==='BEGINNER'}} style={[styles.modeButton, controlMode==='BEGINNER' && styles.modeButtonSelected]} onPress={() => selectControlMode('BEGINNER')}><Text style={styles.modeText}>초보 4버튼</Text></Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel="고급 6버튼" accessibilityState={{selected:controlMode==='ADVANCED'}} style={[styles.modeButton, controlMode==='ADVANCED' && styles.modeButtonSelected]} onPress={() => selectControlMode('ADVANCED')}><Text style={styles.modeText}>고급 6버튼</Text></Pressable>
+            </View>
             <Pressable accessibilityRole="button" accessibilityLabel="여유 있게 시작" style={styles.beginButton} onPress={() => begin(ROUND_SPEEDS.relaxed)}><Text style={styles.beginText}>여유 있게 시작</Text></Pressable>
             <Pressable accessibilityRole="button" accessibilityLabel="원래 속도로 도전" style={styles.replayButton} onPress={() => begin(ROUND_SPEEDS.original)}><Text style={styles.replayText}>원래 속도로 도전</Text></Pressable>
             <Text style={styles.smallPrint}>회피는 한 동작씩. 너무 빠르면 복귀 뒤 다시 누르세요.</Text>
@@ -324,7 +347,7 @@ export function P0GameScreen({
             <Pressable accessibilityLabel="다른 패턴 도전" accessibilityRole="button" style={styles.replayButton} onPress={() => handleRetry((snapshot.seed + 1) >>> 0)}><Text style={styles.replayText}>다른 패턴 도전</Text></Pressable>
             <Pressable accessibilityLabel="속도 다시 선택" accessibilityRole="button" style={styles.replayButton} onPress={() => {
               clockRef.current.pause(); startedRef.current=false; pausedRef.current=false; resultsReadyRef.current=false; setStarted(false); setPaused(false); acceptedAt.current.clear(); setNotice(null);
-              sessionRef.current = new P0TenPunchSession(clockRef.current, getP0MotionSourceIds(), {seed:snapshot.seed, ruleset:'candidate'});
+              sessionRef.current = new P0TenPunchSession(clockRef.current, getP0MotionSourceIds(), {seed:snapshot.seed, ruleset:'candidate', controlMode});
               setSnapshot(sessionRef.current.snapshot());
             }}><Text style={styles.replayText}>속도 다시 선택</Text></Pressable>
             {debugMode ? (
@@ -359,6 +382,7 @@ export function P0GameScreen({
         <DefenseControls
           key={`${snapshot.runId}:${started}:${paused}`}
           compact={compact}
+          mode={controlMode}
           disabled={!started || paused || snapshot.sessionCompleted}
           onDefensePressIn={handleDefensePressIn}
           onDefensePressOut={() => undefined}
@@ -385,6 +409,10 @@ const styles = StyleSheet.create({
   introEyebrow: { color: '#F3C969', fontSize: 10, letterSpacing: 2, fontWeight: '800' },
   introTitle: { color: '#FFFFFF', fontSize: 25, lineHeight: 32, fontWeight: '800' },
   introBody: { color: '#C3CFDA', fontSize: 14, lineHeight: 22 },
+  modeRow: { flexDirection: 'row', gap: 8 },
+  modeButton: { flex: 1, minHeight: 40, borderWidth: 1, borderColor: '#52677A', borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#172A3A' },
+  modeButtonSelected: { borderColor: '#F3C969', backgroundColor: '#3B3522' },
+  modeText: { color: '#F7FAFC', fontSize: 13, fontWeight: '800' },
   beginButton: { minHeight: 44, backgroundColor: '#F3C969', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   beginText: { color: '#18202B', fontSize: 14, fontWeight: '800' },
   roundHint: { position: 'absolute', top: 16, left: 10, right: 10, textAlign: 'center', color: '#F3C969', fontSize: 13, fontWeight: '800' },

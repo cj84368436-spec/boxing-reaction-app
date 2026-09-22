@@ -1,8 +1,8 @@
-import type { AttackDefinition, DefenseInput, DefenseOutcome } from '../model/types.js';
+import type { AttackDefinition, BeginnerDefenseInput, DefenseInput, DefenseOutcome } from '../model/types.js';
 
 export function resolveDefense(
   attack: AttackDefinition,
   input: DefenseInput
 ): DefenseOutcome {
-  return attack.defenseMatrix[input];
+  return attack.defenseMatrix[input as BeginnerDefenseInput] ?? 'HIT';
 }
