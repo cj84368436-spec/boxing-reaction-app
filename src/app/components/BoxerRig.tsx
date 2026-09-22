@@ -40,7 +40,7 @@ export function BoxerRig({ pose, frame }: BoxerRigProps) {
         {frame?.cueActive ? <Polyline points={[...frame.trail, frame.pose[frame.hand]].map(p => `${p.x},${p.y}`).join(' ')} fill="none" stroke="#F3C969" strokeWidth={18} strokeLinecap="round" opacity={0.22} /> : null}
         <VectorArtwork nodes={artwork} />
         </G>
-        {frame?.contact ? <G>{Array.from({length:8}, (_, i) => {
+        {frame?.contact && (frame.hit || frame.guard > .5) ? <G>{Array.from({length:8}, (_, i) => {
           const a = i * Math.PI / 4, x = 140 + frame.cameraX, y = 165 + frame.cameraY;
           return <Line key={i} x1={x+Math.cos(a)*43} y1={y+Math.sin(a)*43} x2={x+Math.cos(a)*54} y2={y+Math.sin(a)*54} stroke={frame.hit ? '#FF7A80' : '#F3C969'} strokeWidth={3} strokeLinecap="round" />;
         })}</G> : null}

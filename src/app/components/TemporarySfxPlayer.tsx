@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { PLAYTEST_SFX_DATA_URIS } from '../assets/sfx/playtestSfxData';
 
-export type PlaytestSound = 'evade' | 'guard' | 'hit';
+export type PlaytestSound = 'evade' | 'guard' | 'hit' | 'hitJab' | 'hitStraight' | 'hitHook' | 'recognition';
 
 export interface PlaytestSoundCue {
   readonly id: string;
@@ -11,6 +11,10 @@ export interface PlaytestSoundCue {
 }
 
 const SOURCES: Readonly<Record<PlaytestSound, { readonly uri: string; readonly type: string }>> = {
+  hitJab: {uri:PLAYTEST_SFX_DATA_URIS.hitJab,type:'wav'},
+  hitStraight: {uri:PLAYTEST_SFX_DATA_URIS.hitStraight,type:'wav'},
+  hitHook: {uri:PLAYTEST_SFX_DATA_URIS.hitHook,type:'wav'},
+  recognition: {uri:PLAYTEST_SFX_DATA_URIS.recognition,type:'wav'},
   evade: { uri: PLAYTEST_SFX_DATA_URIS.evade, type: 'wav' },
   guard: { uri: PLAYTEST_SFX_DATA_URIS.guard, type: 'wav' },
   hit: { uri: PLAYTEST_SFX_DATA_URIS.hit, type: 'wav' },

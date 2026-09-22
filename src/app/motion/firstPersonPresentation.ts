@@ -1,3 +1,5 @@
+import { candidateCombatPose } from './candidateCombatPose.js';
+import { candidateFailureReason } from '../session/candidateRules.js';
 import { P0_ATTACKS } from '../../game/config/p0Attacks.js';
 import type { TenPunchSessionSnapshot } from '../session/P0TenPunchSession.js';
 import { projectFrontPose } from './projectFrontPose.js';
@@ -81,34 +83,38 @@ export function getFirstPersonFrame(
   const visible = started.at(-1) ?? snapshot.scheduledAttacks[0]!;
   const attack = P0_ATTACKS[visible.attackId as keyof typeof P0_ATTACKS];
   const asset = assets[visible.attackId]!;
+  const candidate = snapshot.ruleset === 'candidate';
+  const project = (asset: MotionAsset, elapsed: number) => candidate ? candidateCombatPose(asset.attackId, elapsed) : projectCombatPose(asset, elapsed);
   const start = visible.attackStartScheduledAtMs ?? snapshot.nowMs;
   const elapsedMs = Math.max(0, snapshot.nowMs - start);
   const impactAt = start + attack.impactMs;
   const result = snapshot.results.find(r => r.attackInstanceId === visible.attackInstanceId);
   const inputState = result?.telemetry ?? (snapshot.currentAttack.attackInstanceId === visible.attackInstanceId ? snapshot.currentAttack : undefined);
-  const input = inputState?.inputStatus === 'VALID' ? inputState.inputButton : undefined;
-  const inputAt = result?.telemetry.inputAtMs ?? acceptedAt.get(visible.attackInstanceId) ?? snapshot.nowMs;
+  const input = inputState?.inputStatus === 'VALID' || (candidate && inputState?.inputStatus === 'EARLY') ? inputState.inputButton : undefined;
+  const inputAt = inputState?.inputAtMs ?? result?.telemetry.inputAtMs ?? acceptedAt.get(visible.attackInstanceId) ?? snapshot.nowMs;
   const enterMs = Math.max(1, Math.min(90, impactAt - inputAt));
-  const strength = input == null ? 0 : ease((snapshot.nowMs - inputAt) / enterMs) * (1 - ease((snapshot.nowMs - impactAt - 60) / 180));
+  const early = inputState?.inputStatus === 'EARLY';
+  const strength = input == null ? 0 : ease((snapshot.nowMs - inputAt) / enterMs) * (1 - ease((snapshot.nowMs - (early ? inputAt + 100 : impactAt + 60)) / 140));
   const direction = input === 'LEFT' ? 1 : input === 'RIGHT' ? -1 : 0;
   const weaving = attack.punchType === 'HOOK' && input === 'RIGHT';
   // A lateral move into the lead hook does not clear its contact radius.
   // The right weave clears it vertically; a left attempt remains visibly caught.
-  const clearance = attack.punchType === 'HOOK' && input === 'LEFT' ? 22 : 64;
+  const failedStraight = candidate && attack.hand === 'REAR' && (input === 'RIGHT' || input === 'BACK');
+  const clearance = failedStraight ? 18 : attack.punchType === 'HOOK' && input === 'LEFT' ? 22 : 64;
   const cameraX = strength > 0 ? direction * clearance * strength : 0;
   const cameraY = weaving && strength > 0 ? -80 * strength : 0;
-  const cameraScale = input === 'BACK' ? 1 - 0.24 * strength : 1;
-  const guard = input === 'GUARD' ? strength : 0;
+  const cameraScale = input === 'BACK' ? 1 - (failedStraight ? 0.06 : 0.24) * strength : 1;
+  const guard = input === 'GUARD' ? strength * (candidate && (result?.outcome === 'HIT' || (!result && snapshot.guardEnergy === 0)) ? .32 : 1) : 0;
   const age = snapshot.nowMs - impactAt;
   const hit = result?.outcome === 'HIT' && age >= 0 && age < 140;
-  let pose = projectCombatPose(asset, elapsedMs);
+  let pose = project(asset, elapsedMs);
   const next = snapshot.scheduledAttacks[visible.attackIndex + 1];
   if (next?.attackStartScheduledAtMs != null) {
     // The shared game schedule may start the next combo punch before the source
     // clip finishes. Blend only the recovery presentation, never the cue/impact.
     const blendStart = Math.max(impactAt + 60, Math.min(start + asset.visualRecoveryMs, next.attackStartScheduledAtMs - 100));
     const blend = ease((snapshot.nowMs - blendStart) / Math.max(1, next.attackStartScheduledAtMs - blendStart));
-    const ready = projectCombatPose(assets[next.attackId]!, 0);
+    const ready = project(assets[next.attackId]!, 0);
     pose = Object.fromEntries(JOINT_NAMES.map(joint => [joint, {
       x: pose[joint].x + (ready[joint].x - pose[joint].x) * blend,
       y: pose[joint].y + (ready[joint].y - pose[joint].y) * blend,
@@ -122,10 +128,10 @@ export function getFirstPersonFrame(
       : result.telemetry.inputStatus === 'EARLY' ? '피격 · 너무 빠름'
         : result.telemetry.inputStatus === 'LATE' ? '피격 · 너무 늦음'
           : result.telemetry.inputStatus === 'MULTI_INPUT' ? '피격 · 하나씩 입력'
-            : '피격 · 회피 방향';
+            : candidate ? '피격 · ' + candidateFailureReason(visible.attackId, input) : '피격 · 회피 방향';
   const cueActive = snapshot.nowMs >= start + attack.cueAnchorMs && age < 0;
   const hand: 'rHand' | 'lHand' = attack.hand === 'REAR' ? 'rHand' : 'lHand';
-  const trail = [90, 60, 30].map(delay => projectCombatPose(asset, Math.max(0, elapsedMs - delay))[hand]);
+  const trail = [90, 60, 30].map(delay => project(asset, Math.max(0, elapsedMs - delay))[hand]);
   const hint = attack.punchType === 'HOOK' ? '훅 · 오른쪽으로 숙이세요'
     : attack.hand === 'REAR' ? '스트레이트 · 왼쪽으로 피하세요' : '잽 · 좌우로 피하세요';
   return { attackId: visible.attackId, elapsedMs, pose, cameraX, cameraY, cameraScale, guard, hit, feedback,

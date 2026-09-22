@@ -7,6 +7,7 @@ import { createCanonicalGameClock } from '../canonicalEngineImports';
 import { BoxerRig } from '../components/BoxerRig';
 import { CoachReaction } from '../components/CoachReaction';
 import { getCoachMoment, getRematchReview } from '../motion/coachPresentation';
+import { candidateFailureReason } from '../session/candidateRules';
 import { COACH_INTRO } from '../motion/boxingArtwork';
 import { DefenseControls } from '../components/DefenseControls';
 import {
@@ -59,7 +60,7 @@ function soundFor(result: TenPunchSessionResult): PlaytestSoundCue {
     id: result.attackInstanceId,
     sound:
       result.outcome === 'HIT'
-        ? 'hit'
+        ? result.attackId === 'LEAD_JAB_HEAD' ? 'hitJab' : result.attackId === 'REAR_STRAIGHT_HEAD' ? 'hitStraight' : 'hitHook'
         : result.telemetry.inputButton === 'GUARD'
           ? 'guard'
           : 'evade',
@@ -76,7 +77,7 @@ function resultDescription(result: TenPunchSessionResult): string {
   const button = result.telemetry.inputButton;
   const input = button == null ? '입력 없음' : {LEFT:'왼쪽 회피', RIGHT:'오른쪽 회피', BACK:'뒤로 피하기', GUARD:'가드'}[button];
   const reason = result.outcome === 'PERFECT' ? '완벽하게 피함' : result.outcome === 'SAFE' ? '안전하게 방어' :
-    result.telemetry.inputStatus === 'VALID' ? '훅 안쪽으로 이동해 맞음' :
+    result.telemetry.inputStatus === 'VALID' ? candidateFailureReason(result.attackId,button) :
     ({NO_INPUT:'누르지 않아 맞음', EARLY:'너무 일찍 누름', LATE:'늦게 누름', MULTI_INPUT:'버튼을 동시에 누름'} as Record<string,string>)[result.telemetry.inputStatus] ?? '방어 실패';
   return `${input} · ${reason}`;
 }
@@ -103,6 +104,7 @@ export function P0GameScreen({
   const [notice, setNotice] = useState<{text: string; until: number} | null>(null);
   const [initialSession] = useState(() =>
     new P0TenPunchSession(roundClock, getP0MotionSourceIds(), {
+      ruleset: 'candidate',
       ...(seed == null ? {} : { seed }),
     }),
   );
@@ -161,8 +163,9 @@ export function P0GameScreen({
     [snapshot],
   );
   const coachMoment = getCoachMoment(snapshot);
-  const rematch = getRematchReview(snapshot.results, speed);
-  const soundCue = latestResult == null ? undefined : soundFor(latestResult);
+  const rematch = getRematchReview(snapshot.results, speed, true);
+  const recognized = showResults && snapshot.results.every(r=>r.outcome !== 'HIT') && snapshot.results.filter(r=>r.outcome === 'PERFECT').length >= 8;
+  const soundCue: PlaytestSoundCue | undefined = recognized ? {id:snapshot.runId + ':recognition', sound:'recognition'} : latestResult == null ? undefined : soundFor(latestResult);
   const hitVisible = frame.hit;
   const windowOpen = isDefenseWindowOpen(snapshot);
   const counts = snapshot.results.reduce(
@@ -176,7 +179,8 @@ export function P0GameScreen({
     if (receipt.status === 'VALID' && !acceptedAt.current.has(receipt.targetAttackInstanceId)) {
       acceptedAt.current.set(receipt.targetAttackInstanceId, receipt.atMs);
     }
-    if (receipt.status !== 'VALID') setNotice({text: receipt.status === 'EARLY' ? '너무 빠른 입력' : receipt.status === 'LATE' ? '조금 더 일찍 눌러보세요' : '버튼 하나만 눌러주세요', until:clockRef.current.nowMs()+200});
+    if (receipt.status === 'VALID') setNotice({text: ({LEFT:'왼쪽 회피',RIGHT:'오른쪽 회피',BACK:'거리 빼기',GUARD:'가드'})[receipt.input] + ' · 동작 중', until:clockRef.current.nowMs()+160});
+    if (receipt.status !== 'VALID') setNotice({text: receipt.status === 'EARLY' ? '너무 빠름 · 복귀 뒤 다시 입력' : receipt.status === 'LATE' ? '조금 더 일찍 눌러보세요' : '버튼 하나만 눌러주세요', until:clockRef.current.nowMs()+200});
     setSnapshot(sessionRef.current.snapshot());
   };
 
@@ -189,7 +193,7 @@ export function P0GameScreen({
     acceptedAt.current.clear();
     setNotice(null);
     sessionRef.current.retry({
-      leadInMs: readyLeadInMs * speed,
+      leadInMs: Math.min(800, readyLeadInMs) * speed,
       ...(retrySeed == null ? {} : { seed: retrySeed }),
     });
     setSnapshot(sessionRef.current.snapshot());
@@ -207,7 +211,7 @@ export function P0GameScreen({
         },
       ]}
     >
-      <TemporarySfxPlayer cue={soundCue} enabled={soundEnabled && foreground && !paused && !showResults} />
+      <TemporarySfxPlayer cue={soundCue} enabled={soundEnabled && foreground && !paused && (!showResults || recognized)} />
 
       <View style={styles.hud}>
         <View style={styles.hudTitle}>
@@ -244,7 +248,7 @@ export function P0GameScreen({
         ))}
       </View>
 
-      <View style={[styles.stage, hitVisible && styles.stageHit]}>
+      <View style={[styles.stage, hitVisible && styles.stageHit, frame.contact && frame.outcome === 'PERFECT' && styles.stageEvaded]}>
         <View style={[styles.rope, styles.ropeTop]} />
         <View style={[styles.rope, styles.ropeMiddle]} />
         <View style={[styles.rope, styles.ropeBottom]} />
@@ -263,7 +267,7 @@ export function P0GameScreen({
           <Text pointerEvents="none" style={styles.roundHint}>
             {snapshot.nowMs < snapshot.scheduledAttacks[0]!.attackStartScheduledAtMs!
               ? `준비 ${Math.ceil((snapshot.scheduledAttacks[0]!.attackStartScheduledAtMs! - snapshot.nowMs) / (speed * 1000))}`
-              : speed < 1 && frame.cueActive ? frame.hint : frame.feedback}
+              : frame.feedback}
           </Text>
         ) : null}
         {!started ? (
@@ -271,13 +275,13 @@ export function P0GameScreen({
           <ScrollView contentContainerStyle={[styles.introContent, compact && styles.introCompact]}>
             <CoachReaction reaction={COACH_INTRO} />
             <Text style={styles.introTitle}>주먹을 보고, 피하세요.</Text>
-            <Text style={styles.introBody}>화면 아래 버튼을 눌러 피하세요.{"\n"}잽은 좌우, 스트레이트는 왼쪽.{"\n"}옆으로 오는 훅은 오른쪽으로 숙이세요.</Text>
-            <Text style={styles.introBody}>너무 일찍 누르면 맞아요.{"\n"}공격마다 첫 입력만 판정해요.</Text>
+            <Text style={styles.introBody}>화면 아래 버튼을 눌러 피하세요.{"\n"}짧은 잽은 좌우, 어깨를 젖히는 뒷손은 왼쪽.{"\n"}팔을 벌려 옆으로 오는 훅은 오른쪽으로 숙이세요.</Text>
+            <Text style={styles.introBody}>가드는 두 번, 회피하면 한 칸 회복.{"\n"}스트레이트는 뒤로 빠져도 닿아요.</Text>
           </ScrollView>
           <View style={styles.introActions}>
             <Pressable accessibilityRole="button" accessibilityLabel="여유 있게 시작" style={styles.beginButton} onPress={() => begin(ROUND_SPEEDS.relaxed)}><Text style={styles.beginText}>여유 있게 시작</Text></Pressable>
             <Pressable accessibilityRole="button" accessibilityLabel="원래 속도로 도전" style={styles.replayButton} onPress={() => begin(ROUND_SPEEDS.original)}><Text style={styles.replayText}>원래 속도로 도전</Text></Pressable>
-            <Text style={styles.smallPrint}>여유 속도에는 공격 안내가 나와요.</Text>
+            <Text style={styles.smallPrint}>회피는 한 동작씩. 너무 빠르면 복귀 뒤 다시 누르세요.</Text>
           </View></View>
         ) : null}
         {paused ? (
@@ -311,15 +315,16 @@ export function P0GameScreen({
             <Pressable
               accessibilityLabel="다시 도전"
               accessibilityRole="button"
-              onPress={() => handleRetry(rematch.replaySameSeed ? snapshot.seed : undefined)}
+              onPress={() => handleRetry(rematch.replaySameSeed ? snapshot.seed : (snapshot.seed + 1) >>> 0)}
               style={({ pressed }) => [styles.retryButton, pressed && styles.retryPressed]}
             >
               <Text style={styles.retryText}>{rematch.retryLabel}</Text>
               <Text style={styles.rematchNote}>{rematch.retryNote}</Text>
             </Pressable>
+            <Pressable accessibilityLabel="다른 패턴 도전" accessibilityRole="button" style={styles.replayButton} onPress={() => handleRetry((snapshot.seed + 1) >>> 0)}><Text style={styles.replayText}>다른 패턴 도전</Text></Pressable>
             <Pressable accessibilityLabel="속도 다시 선택" accessibilityRole="button" style={styles.replayButton} onPress={() => {
               clockRef.current.pause(); startedRef.current=false; pausedRef.current=false; resultsReadyRef.current=false; setStarted(false); setPaused(false); acceptedAt.current.clear(); setNotice(null);
-              sessionRef.current = new P0TenPunchSession(clockRef.current, getP0MotionSourceIds(), {seed:snapshot.seed});
+              sessionRef.current = new P0TenPunchSession(clockRef.current, getP0MotionSourceIds(), {seed:snapshot.seed, ruleset:'candidate'});
               setSnapshot(sessionRef.current.snapshot());
             }}><Text style={styles.replayText}>속도 다시 선택</Text></Pressable>
             {debugMode ? (
@@ -336,13 +341,13 @@ export function P0GameScreen({
         ) : null}
 
         {started && !paused && !showResults ? <View pointerEvents="none" style={styles.canvasLabel}>
-          <Text style={styles.canvasLabelText}>{speed < 1 ? '여유 모드 · 공격 안내' : '원래 속도'}</Text>
+          <Text style={styles.canvasLabelText}>{`가드 ${'●'.repeat(snapshot.guardEnergy ?? 2)}${'○'.repeat(2-(snapshot.guardEnergy ?? 2))} · 회피로 회복`}</Text>
         </View> : null}
       </View>
 
       {started && !showResults ? <CoachReaction compact reaction={{
-        mood: !paused && coachMoment ? coachMoment.mood : 'smirk',
-        line: !paused && coachMoment ? coachMoment.line : paused ? '쉬고 오게. 기다리지.' : '……어디 한번 볼까.',
+        mood: !paused && coachMoment ? coachMoment.mood : counts.PERFECT >= 6 ? 'surprised' : counts.PERFECT >= 3 ? 'interested' : 'smirk',
+        line: !paused && coachMoment ? coachMoment.line : paused ? '쉬고 오게. 기다리지.' : '',
         note: '',
       }} /> : null}
 
@@ -403,6 +408,7 @@ const styles = StyleSheet.create({
   progressHit: { backgroundColor: '#FF7A80' },
   progressResolved: { backgroundColor: '#56D68B' },
   stage: { flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: 24, borderWidth: 1, borderColor: '#2A4052', backgroundColor: '#132433' },
+  stageEvaded: { borderColor: '#56D68B' },
   stageHit: { borderColor: '#FF666D' },
   camera: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
   hitFlash: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255, 80, 86, 0.16)' },

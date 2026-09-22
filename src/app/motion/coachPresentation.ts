@@ -1,3 +1,4 @@
+import { candidateFailureReason, CANDIDATE_ATTACKS } from '../session/candidateRules.js';
 import { P0_ATTACKS } from '../../game/config/p0Attacks.js';
 import { coachVerdict } from './boxingArtwork.js';
 import type { TenPunchSessionResult, TenPunchSessionSnapshot } from '../session/P0TenPunchSession.js';
@@ -16,14 +17,14 @@ export function getCoachMoment(snapshot: TenPunchSessionSnapshot): CoachMoment |
       snapshot.nowMs >= next.attackStartScheduledAtMs - BEFORE_NEXT_ATTACK_MS) return null;
   const firstHit = snapshot.results.find(result => result.outcome === 'HIT');
   if (firstHit?.comboIndex === latest.comboIndex)
-    return { mood: 'smirk', line: '그걸 맞나?' };
+    return { mood: 'smirk', line: snapshot.ruleset === 'candidate' ? ['힘 빼고. 주먹부터 보게.', '서두르면 내가 이기지.', '방금 어깨 봤나?'][latest.comboIndex % 3]! : '그걸 맞나?' };
   if (snapshot.results.length >= 3 && snapshot.results.slice(-3).every(result => result.outcome !== 'HIT'))
-    return { mood: 'interested', line: '……어?' };
+    return { mood: snapshot.results.filter(r => r.outcome === 'PERFECT').length >= 6 ? 'surprised' : 'interested', line: snapshot.ruleset === 'candidate' ? ['……방금 건 제법인데.', '흠. 이제 눈이 따라오는군.', '잠깐. 이것도 피한다고?'][latest.comboIndex % 3]! : '……어?' };
   return null;
 }
 
 // Report an actual recorded miss; this never changes the result or timing window.
-export function getRematchReview(results: readonly TenPunchSessionResult[], speed = 1) {
+export function getRematchReview(results: readonly TenPunchSessionResult[], speed = 1, candidate = false) {
   const counts = { PERFECT: 0, SAFE: 0, HIT: 0 };
   for (const result of results) counts[result.outcome]++;
   const hits = results.filter(result => result.outcome === 'HIT');
@@ -33,7 +34,7 @@ export function getRematchReview(results: readonly TenPunchSessionResult[], spee
   const replaySameSeed = hits.length > 0;
   const roundSpeed = Number.isFinite(speed) && speed > 0 ? speed : 1;
   const closeLate = hits.map(result => {
-    const attack = P0_ATTACKS[result.attackId as keyof typeof P0_ATTACKS];
+    const attack = candidate ? CANDIDATE_ATTACKS[result.attackId] : P0_ATTACKS[result.attackId as keyof typeof P0_ATTACKS];
     const {inputAtMs, inputButton, inputStatus, attackStartScheduledAtMs} = result.telemetry;
     if (!attack || inputStatus !== 'LATE' || inputAtMs == null || inputButton == null || attack.defenseMatrix[inputButton] === 'HIT') return null;
     const lateMs = (inputAtMs - attackStartScheduledAtMs - attack.responseWindowEndMs) / roundSpeed;
@@ -47,14 +48,18 @@ export function getRematchReview(results: readonly TenPunchSessionResult[], spee
     focusTitle = String(target.attackIndex + 1) + '번째 ' + label;
     if (closeLate) {
       focusTitle += ' · 조금 늦었어요';
-      focusBody = '방어 가능한 시점보다 ' + (Math.max(1,Math.round(closeLate.lateMs / 10)) / 100).toFixed(2) + '초 늦게 눌렀어요. 이번에는 주먹이 움직일 때 반응해보세요.';
+      focusBody = '방어 가능한 시점보다 ' + Number((closeLate.lateMs / 1000).toFixed(3)).toString() + '초 늦게 눌렀어요. 이번에는 주먹이 움직일 때 반응해보세요.';
     } else {
       focusBody = target.telemetry.inputStatus === 'EARLY' ? '주먹이 움직이기 전에 눌렀어요. 다음에는 움직임을 보고 한 번 눌러보세요.'
         : target.telemetry.inputStatus === 'MULTI_INPUT' ? '여러 버튼을 함께 눌렀어요. 다음에는 한 방향만 골라보세요.'
         : target.telemetry.inputStatus === 'LATE' ? '방어할 수 있는 시점을 지났어요. 주먹이 닿기 전에 반응해보세요.'
-        : target.telemetry.inputStatus === 'VALID' ? '훅이 오는 쪽으로 움직였어요. 오른쪽으로 숙여 피하거나 가드해보세요.'
+        : target.telemetry.inputStatus === 'VALID' ? candidate ? candidateFailureReason(target.attackId, target.telemetry.inputButton) : '훅이 오는 쪽으로 움직였어요. 오른쪽으로 숙여 피하거나 가드해보세요.'
         : '입력이 없었어요. 주먹이 움직이면 방어 버튼을 한 번 눌러보세요.';
     }
+  }
+  if (candidate && counts.PERFECT >= 8 && counts.HIT === 0) {
+    focusTitle = '인정 도장 · 관장의 팔짱을 풀었다';
+    focusBody = '눈은 진짜군. 오늘부터 자네는 도전자야. 다음 패턴에서도 실력을 보여주세요.';
   }
   return { reaction, focusTitle, focusBody, replaySameSeed,
     retryLabel: replaySameSeed ? '관장에게 다시 도전' : '새 순서로 다시 도전',

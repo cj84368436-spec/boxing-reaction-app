@@ -1,3 +1,4 @@
+import { candidateFailureReason } from '/.preview-dist/app/session/candidateRules.js';
 import { RoundClock, ROUND_SPEEDS } from '/.preview-dist/app/session/RoundClock.js';
 import { PreviewTenPunchSession } from './preview-session.mjs';
 import { getFirstPersonFrame } from '/.preview-dist/app/motion/firstPersonPresentation.js';
@@ -12,7 +13,7 @@ const assets = {}, acceptedAt = new Map();
 const clock = new RoundClock({ nowMs: () => performance.now() });
 let session, playedResults = 0, showingResults = false, started = false, paused = false;
 let soundEnabled = true, frameId = null;
-const sounds = Object.fromEntries(['evade', 'guard', 'hit'].map(kind => {
+const sounds = Object.fromEntries(['evade', 'guard', 'hit', 'hitJab', 'hitStraight', 'hitHook', 'recognition'].map(kind => {
   const audio = new Audio(`/src/app/assets/sfx/${kind}.wav`);
   audio.preload = 'auto'; audio.volume = .7;
   return [kind, audio];
@@ -63,7 +64,7 @@ function draw(frame) {
   const moment = getCoachMoment(session.snapshot());
   const liveCoach = byId('coach-ringside');
   liveCoach.hidden = !started || showingResults;
-  const reaction = { mood: !paused && moment ? moment.mood : 'smirk', line: !paused && moment ? moment.line : paused ? '쉬고 오게. 기다리지.' : '……어디 한번 볼까.', note: '' };
+  const reaction = { mood: !paused && moment ? moment.mood : session.snapshot().results.filter(r=>r.outcome==='PERFECT').length >= 6 ? 'surprised' : session.snapshot().results.filter(r=>r.outcome==='PERFECT').length >= 3 ? 'interested' : 'smirk', line: !paused && moment ? moment.line : paused ? '쉬고 오게. 기다리지.' : '', note: '' };
   const key = reaction.mood + reaction.line;
   if (liveCoach.dataset.reaction !== key) {
     renderCoach('coach-ringside', reaction);
@@ -71,7 +72,7 @@ function draw(frame) {
     liveCoach.dataset.reaction = key;
   }
   const contact = element('g', {opacity:frame.contact ? 1 : 0});
-  if (frame.contact) {
+  if (frame.contact && (frame.hit || frame.guard > .5)) {
     const cx = 140 + frame.cameraX, cy = 165 + frame.cameraY;
     for (let i=0;i<8;i++) { const a=i*Math.PI/4; contact.append(element('line', {
       x1:cx+Math.cos(a)*43,y1:cy+Math.sin(a)*43,x2:cx+Math.cos(a)*54,y2:cy+Math.sin(a)*54,
@@ -79,19 +80,20 @@ function draw(frame) {
   }
   svg.replaceChildren(world, contact, gloves);
   stage.classList.toggle('hit', frame.hit);
+  stage.classList.toggle('evaded', frame.contact && frame.outcome === 'PERFECT');
   status.textContent = !started ? '공격마다 버튼 한 번' : paused ? '일시 정지' : showingResults ? '라운드 완료' :
     notice && clock.nowMs() < notice.until ? notice.text : frame.feedback || '주먹을 보세요';
   const snapshot = session.snapshot();
   const until = snapshot.scheduledAttacks[0].attackStartScheduledAtMs - snapshot.nowMs;
   byId('round-hint').textContent = !started || paused || showingResults ? '' : until > 0 ? `준비 ${Math.ceil(until / (speed * 1000))}` :
-    speed < 1 && frame.cueActive ? frame.hint : frame.feedback;
+    frame.feedback;
   byId('mode-label').hidden = !started || paused || showingResults;
-  byId('mode-label').textContent = speed < 1 ? '여유 모드 · 공격 안내' : '원래 속도';
+  byId('mode-label').textContent = `가드 ${'●'.repeat(snapshot.guardEnergy)}${'○'.repeat(2-snapshot.guardEnergy)} · 회피로 회복`;
 }
 
 function playSfx(result) {
   if (!soundEnabled || paused || document.hidden) return;
-  const kind = result.outcome === 'HIT' ? 'hit' : result.telemetry.inputButton === 'GUARD' ? 'guard' : 'evade';
+  const kind = result.outcome === 'HIT' ? result.attackId === 'LEAD_JAB_HEAD' ? 'hitJab' : result.attackId === 'REAR_STRAIGHT_HEAD' ? 'hitStraight' : 'hitHook' : result.telemetry.inputButton === 'GUARD' ? 'guard' : 'evade';
   const audio = sounds[kind];
   audio.currentTime = 0;
   void audio.play().catch(() => {});
@@ -104,7 +106,8 @@ function handleInput(input) {
   if (receipt.status === 'VALID' && !acceptedAt.has(receipt.targetAttackInstanceId)) {
     acceptedAt.set(receipt.targetAttackInstanceId, receipt.atMs);
   }
-  if (receipt.status !== 'VALID') notice = {text: receipt.status === 'EARLY' ? '너무 빠른 입력' : receipt.status === 'LATE' ? '조금 더 일찍 눌러보세요' : '버튼 하나만 눌러주세요', until:clock.nowMs()+200};
+  if (receipt.status === 'VALID') notice = {text: ({LEFT:'왼쪽 회피',RIGHT:'오른쪽 회피',BACK:'거리 빼기',GUARD:'가드'})[receipt.input] + ' · 동작 중', until:clock.nowMs()+160};
+  if (receipt.status !== 'VALID') notice = {text: receipt.status === 'EARLY' ? '너무 빠름 · 복귀 뒤 다시 입력' : receipt.status === 'LATE' ? '조금 더 일찍 눌러보세요' : '버튼 하나만 눌러주세요', until:clock.nowMs()+200};
   return receipt;
 }
 
@@ -114,7 +117,8 @@ function showResults(snapshot) {
   for (const result of snapshot.results) totals[result.outcome]++;
   for (const outcome of Object.keys(totals)) byId(`summary-${outcome.toLowerCase()}`).textContent = `${({PERFECT:'완벽 회피',SAFE:'안전 방어',HIT:'피격'})[outcome]} ${totals[outcome]}`;
   byId('result-title').textContent = `${totals.PERFECT + totals.SAFE} / 10 방어 성공`;
-  const rematch = getRematchReview(snapshot.results, speed);
+  const rematch = getRematchReview(snapshot.results, speed, true);
+  if (totals.HIT === 0 && totals.PERFECT >= 8 && soundEnabled) {sounds.recognition.currentTime=0; void sounds.recognition.play().catch(()=>{});}
   renderCoach('coach-result', rematch.reaction);
   byId('rematch-title').textContent = rematch.focusTitle;
   byId('rematch-body').textContent = rematch.focusBody;
@@ -127,7 +131,7 @@ function showResults(snapshot) {
     const detail = document.createElement('div'); detail.className = 'result-detail';
     const input = {LEFT:'왼쪽 회피',RIGHT:'오른쪽 회피',BACK:'뒤로 피하기',GUARD:'가드'}[result.telemetry.inputButton] ?? '입력 없음';
     const reason = result.outcome !== 'HIT' ? result.outcome === 'PERFECT' ? '완벽하게 피함' : '안전하게 방어' :
-      result.telemetry.inputStatus === 'NO_INPUT' ? '누르지 않아 맞음' : result.telemetry.inputStatus === 'VALID' ? '훅 안쪽으로 이동해 맞음' :
+      result.telemetry.inputStatus === 'NO_INPUT' ? '누르지 않아 맞음' : result.telemetry.inputStatus === 'VALID' ? candidateFailureReason(result.attackId,result.telemetry.inputButton) :
       {EARLY:'너무 일찍 누름',LATE:'늦게 누름',MULTI_INPUT:'버튼을 동시에 누름'}[result.telemetry.inputStatus] ?? '방어 실패';
     detail.textContent = `${input} · ${reason}`;
     if (debug) detail.textContent += ` · ${result.telemetry.inputStatus} · ${result.telemetry.reactionMs == null ? '—' : Math.round(result.telemetry.reactionMs / speed)} ms`;
@@ -146,6 +150,7 @@ function showResults(snapshot) {
 
 function start(seed, selectedSpeed = speed) {
   if (started && !session.snapshot().sessionCompleted) return;
+  const returning = started;
   stopAudio();
   speed = selectedSpeed; clock.start(speed); started = true; paused = false; notice = null;
   byId('intro-card').hidden = true; byId('pause-card').hidden = true; byId('pause-button').hidden = false;
@@ -156,7 +161,7 @@ function start(seed, selectedSpeed = speed) {
   stage.classList.remove('hit');
   document.querySelector('.controls').hidden = false;
   buttons.forEach(button => { button.disabled = false; button.classList.remove('pressed'); });
-  session.start({ leadInMs: 2000 * speed });
+  session.start({ leadInMs: (returning ? 800 : 2000) * speed });
   focusButton('pause-button'); requestFrame();
 }
 
@@ -196,7 +201,8 @@ byId('mode-button').addEventListener('click', () => {
   byId('result-card').classList.remove('visible'); byId('intro-card').hidden=false; byId('pause-button').hidden=true;
   document.querySelector('.controls').hidden=true; stopAudio(); focusButton('begin-button'); requestFrame();
 });
-byId('retry-button').addEventListener('click', () => { const snapshot = session.snapshot(); start(getRematchReview(snapshot.results, speed).replaySameSeed ? snapshot.seed : Date.now() >>> 0); });
+byId('retry-button').addEventListener('click', () => { const snapshot = session.snapshot(); start(getRematchReview(snapshot.results, speed, true).replaySameSeed ? snapshot.seed : (snapshot.seed + 1) >>> 0); });
+byId('new-pattern-button').addEventListener('click', () => start((session.snapshot().seed + 1) >>> 0));
 byId('replay-seed-button').addEventListener('click', () => start(session.snapshot().seed));
 byId('start-seed-button').addEventListener('click', () => {
   const seed = Number(byId('seed-input').value);

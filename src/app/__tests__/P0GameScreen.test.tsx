@@ -119,7 +119,7 @@ describe('P0GameScreen ten-punch playtest', () => {
     act(() => listeners.get('focus')?.());
     fireEvent.press(screen.getByRole('button', {name:'계속하기'}));
     clock.set(30300); act(() => nextFrame?.(30300));
-    expect(screen.getByTestId('temporary-sfx-hit')).toBeTruthy();
+    expect(screen.getByTestId('temporary-sfx-hitJab')).toBeTruthy();
   });
 
   it('lets the player mute effects and silences playback on pause', () => {

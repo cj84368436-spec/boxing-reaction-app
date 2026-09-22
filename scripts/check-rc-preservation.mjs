@@ -1,0 +1,4 @@
+import {execFileSync} from 'node:child_process';import{readFile,writeFile}from'node:fs/promises';import{createHash}from'node:crypto';
+const files=execFileSync('git',['ls-tree','-r','--name-only','HEAD'],{encoding:'utf8'}).trim().split('\n');let differences=[];
+for(const file of files){const original=await readFile('../boxing-app-p0-ten-punch-playtest/'+file);const preserved=execFileSync('git',['show','HEAD:'+file],{maxBuffer:20*1024*1024});const normalize=b=>b.toString('binary').replace(/\r\n/g,'\n');if(normalize(original)!==normalize(preserved))differences.push(file);}
+const artifact=await readFile('boxing-talent-test.ait');const report={preservedBaseline:'e8c146e',originalFilesCompared:files.length,originalDifferences:differences,artifactBytes:artifact.length,artifactSha256:createHash('sha256').update(artifact).digest('hex')};await writeFile('release/rc/preservation.json',JSON.stringify(report,null,2));console.log(report);

@@ -1,3 +1,4 @@
+import { EARLY_RECOVERY_MS } from './candidateRules.js';
 import { P0_TIMING } from '../../game/config/p0Timing.js';
 import { resolveDefense } from '../../game/engine/DefenseResolver.js';
 import type { GameClock } from '../../game/engine/GameClock.js';
@@ -55,6 +56,7 @@ export interface AttackAttemptSnapshot {
   readonly impactAtMs?: number | undefined;
   readonly elapsedMs: number;
   readonly inputButton?: DefenseInput | undefined;
+  readonly inputAtMs?: number | undefined;
   readonly inputStatus?: InputStatus | undefined;
   readonly outcome?: DefenseOutcome | undefined;
   readonly telemetry?: AttackAttemptTelemetry | undefined;
@@ -65,6 +67,8 @@ export interface AttackAttemptStartOptions {
 }
 
 export interface AttackAttemptControllerConfig {
+  readonly allowEarlyRecovery?: boolean;
+  readonly resolveInput?: (input: DefenseInput) => DefenseOutcome;
   readonly attack: AttackDefinition;
   readonly attackInstanceId: string;
   readonly motionSourceId: string;
@@ -73,6 +77,8 @@ export interface AttackAttemptControllerConfig {
 }
 
 export class P0AttackAttemptController {
+  private readonly allowEarlyRecovery: boolean;
+  private readonly resolveInput: ((input: DefenseInput) => DefenseOutcome) | undefined;
   private readonly attack: AttackDefinition;
   private readonly attackInstanceId: string;
   private readonly motionSourceId: string;
@@ -92,6 +98,8 @@ export class P0AttackAttemptController {
 
   constructor(config: AttackAttemptControllerConfig) {
     this.attack = config.attack;
+    this.allowEarlyRecovery = config.allowEarlyRecovery ?? false;
+    this.resolveInput = config.resolveInput;
     this.attackInstanceId = config.attackInstanceId;
     this.motionSourceId = config.motionSourceId;
     this.clock = config.clock;
@@ -165,6 +173,7 @@ export class P0AttackAttemptController {
 
   handleInput(input: DefenseInput): AttackAttemptInputReceipt {
     const atMs = this.clock.nowMs();
+    this.recoverEarlyInput(atMs);
     if (this.attackWindow == null) {
       const early: RejectedRoutedButtonInput = {
         kind: 'BUTTON',
@@ -207,6 +216,7 @@ export class P0AttackAttemptController {
       throw new Error('Finalized attack cannot accept input');
     }
 
+    this.recoverEarlyInput(input.atMs);
     if (this.multiInput != null) return this.multiInput;
     if (this.rejectedInput != null) return this.rejectedInput;
 
@@ -233,6 +243,10 @@ export class P0AttackAttemptController {
     return this.snapshotAt(this.clock.nowMs());
   }
 
+  private recoverEarlyInput(atMs: number): void {
+    if (this.allowEarlyRecovery && this.rejectedInput?.status === 'EARLY' && atMs - this.rejectedInput.atMs >= EARLY_RECOVERY_MS) delete this.rejectedInput;
+  }
+
   private resolveAt(impactActualAtMs: number): void {
     if (
       this.attackWindow == null ||
@@ -250,7 +264,7 @@ export class P0AttackAttemptController {
         : this.rejectedInput?.status ?? 'NO_INPUT';
     const outcome =
       inputStatus === 'VALID' && this.selectedInput != null
-        ? resolveDefense(this.attack, this.selectedInput.input)
+        ? (this.resolveInput?.(this.selectedInput.input) ?? resolveDefense(this.attack, this.selectedInput.input))
         : 'HIT';
 
     this.outcome = outcome;
@@ -303,6 +317,7 @@ export class P0AttackAttemptController {
                   : this.attackStartActualAtMs),
             ),
       inputButton: chosen?.input,
+      inputAtMs: chosen?.atMs,
       inputStatus,
       outcome: this.outcome,
       telemetry: this.telemetry,

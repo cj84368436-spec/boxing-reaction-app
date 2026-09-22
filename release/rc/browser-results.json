@@ -1,0 +1,33 @@
+{
+  "strategies": {
+    "GUARD": {
+      "hits": 8,
+      "guard": 0
+    },
+    "BACK": {
+      "hits": 3,
+      "guard": 2
+    },
+    "LEFT": {
+      "hits": 3,
+      "guard": 2
+    },
+    "RIGHT": {
+      "hits": 3,
+      "guard": 2
+    },
+    "NONE": {
+      "hits": 10,
+      "guard": 2
+    },
+    "READ": {
+      "hits": 0,
+      "guard": 2
+    }
+  },
+  "errors": [],
+  "pauseResume": true,
+  "motionFrames": 36,
+  "heldPress": true,
+  "simultaneous": true
+}

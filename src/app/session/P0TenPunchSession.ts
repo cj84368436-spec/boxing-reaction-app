@@ -1,3 +1,4 @@
+import { candidatePatterns, GUARD_CAPACITY } from './candidateRules.js';
 import { P0_SEQUENCE } from '../../game/config/p0Sequence.js';
 import { P0_TIMING } from '../../game/config/p0Timing.js';
 import type { GameClock } from '../../game/engine/GameClock.js';
@@ -47,6 +48,8 @@ export interface TenPunchSessionResult extends TenPunchSessionAttack {
 }
 
 export interface TenPunchSessionSnapshot {
+  readonly ruleset?: 'candidate' | 'baseline';
+  readonly guardEnergy?: number;
   readonly runId: string;
   readonly seed: number;
   readonly comboOrderIds: readonly string[];
@@ -63,6 +66,7 @@ export interface TenPunchSessionSnapshot {
 }
 
 interface TenPunchSessionOptions {
+  readonly ruleset?: 'candidate' | 'baseline';
   readonly seed?: number;
   readonly seedFactory?: () => number;
 }
@@ -78,6 +82,8 @@ export class P0TenPunchSession {
   private readonly motionSourceIds: Readonly<Record<string, string>>;
   private readonly seedFactory: () => number;
   private runNumber = 1;
+  private readonly ruleset: 'candidate' | 'baseline';
+  private guardEnergy = GUARD_CAPACITY;
   private seed: number;
   private plans: readonly AttackPlan[];
   private comboOrderIds: readonly string[];
@@ -91,6 +97,7 @@ export class P0TenPunchSession {
     options: TenPunchSessionOptions = {},
   ) {
     this.clock = clock;
+    this.ruleset = options.ruleset ?? 'baseline';
     this.motionSourceIds = motionSourceIds;
     this.seedFactory = options.seedFactory ?? DEFAULT_SEED_FACTORY;
     this.seed = this.normalizeSeed(options.seed ?? this.seedFactory());
@@ -121,6 +128,7 @@ export class P0TenPunchSession {
     }
 
     this.runNumber += 1;
+    this.guardEnergy = GUARD_CAPACITY;
     this.seed = this.normalizeSeed(seed ?? this.seedFactory());
     const runPlan = this.createRunPlan();
     this.plans = runPlan.plans;
@@ -186,6 +194,8 @@ export class P0TenPunchSession {
     }
 
     return {
+      ruleset: this.ruleset,
+      guardEnergy: this.guardEnergy,
       runId: this.runId,
       seed: this.seed,
       comboOrderIds: this.comboOrderIds,
@@ -222,7 +232,7 @@ export class P0TenPunchSession {
   }
 
   private createRunPlan(): { plans: readonly AttackPlan[]; comboOrderIds: readonly string[] } {
-    const comboOrder = createSeededComboOrder(P0_SEQUENCE, this.seed);
+    const comboOrder = this.ruleset === 'candidate' ? candidatePatterns(this.seed) : createSeededComboOrder(P0_SEQUENCE, this.seed);
     const plans: AttackPlan[] = [];
     let comboStartOffsetMs = 0;
 
@@ -264,6 +274,15 @@ export class P0TenPunchSession {
           motionSourceId: this.motionSourceIds[plan.attack.attackId]!,
           clock: this.clock,
           timelineMode: 'ABSOLUTE_SCHEDULE',
+          ...(this.ruleset !== 'candidate' ? {} : { allowEarlyRecovery: true, resolveInput: (input: DefenseInput): DefenseOutcome => {
+            if (input === 'GUARD') {
+              if (this.guardEnergy === 0) return 'HIT';
+              this.guardEnergy--; return 'SAFE';
+            }
+            const outcome = plan.attack.defenseMatrix[input];
+            if (outcome !== 'HIT') this.guardEnergy = Math.min(GUARD_CAPACITY, this.guardEnergy + 1);
+            return outcome;
+          }}),
         }),
       };
     });

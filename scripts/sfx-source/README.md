@@ -10,3 +10,5 @@
 01 FLAC은 피격, 02 FLAC은 가드에 사용합니다. 자르기, 고/저역 필터, 감쇄와 끝 페이드를 적용합니다. 원본은 유지합니다. 회피음은 고정 seed의 필터 잡음으로 생성합니다.
 
 재생성: FFMPEG_PATH 환경변수를 FFmpeg 실행 파일로 지정한 뒤 node scripts/generate-playtest-sfx.mjs. 추가 패키지 설치는 필요 없습니다.
+
+출시 후보(2026-09-16): CC0 원문 재확인. generate-candidate-sfx.mjs는 기존 hit.wav에서 hitJab/hitStraight/hitHook을 파생하고 독자 합성 recognition.wav를 만든다. 원 녹음은 보존한다.

@@ -1,0 +1,73 @@
+{
+  "outcomes": [
+    "PERFECT",
+    "PERFECT",
+    "PERFECT",
+    "PERFECT",
+    "PERFECT",
+    "PERFECT",
+    "PERFECT",
+    "PERFECT",
+    "PERFECT",
+    "PERFECT"
+  ],
+  "frames": 3238,
+  "maxFrameGapMs": 20.90000000000009,
+  "audio": [
+    {
+      "source": "http://127.0.0.1:3001/src/app/assets/sfx/evade.wav",
+      "at": 2854.9000000059605,
+      "ok": true
+    },
+    {
+      "source": "http://127.0.0.1:3001/src/app/assets/sfx/evade.wav",
+      "at": 4245.5,
+      "ok": true
+    },
+    {
+      "source": "http://127.0.0.1:3001/src/app/assets/sfx/evade.wav",
+      "at": 5715.9000000059605,
+      "ok": true
+    },
+    {
+      "source": "http://127.0.0.1:3001/src/app/assets/sfx/evade.wav",
+      "at": 7144.9000000059605,
+      "ok": true
+    },
+    {
+      "source": "http://127.0.0.1:3001/src/app/assets/sfx/evade.wav",
+      "at": 7927.70000000298,
+      "ok": true
+    },
+    {
+      "source": "http://127.0.0.1:3001/src/app/assets/sfx/evade.wav",
+      "at": 9406.59999999404,
+      "ok": true
+    },
+    {
+      "source": "http://127.0.0.1:3001/src/app/assets/sfx/evade.wav",
+      "at": 10585.29999999702,
+      "ok": true
+    },
+    {
+      "source": "http://127.0.0.1:3001/src/app/assets/sfx/evade.wav",
+      "at": 12113.5,
+      "ok": true
+    },
+    {
+      "source": "http://127.0.0.1:3001/src/app/assets/sfx/evade.wav",
+      "at": 12897.20000000298,
+      "ok": true
+    },
+    {
+      "source": "http://127.0.0.1:3001/src/app/assets/sfx/evade.wav",
+      "at": 13917.5,
+      "ok": true
+    },
+    {
+      "source": "http://127.0.0.1:3001/src/app/assets/sfx/recognition.wav",
+      "at": 14197,
+      "ok": true
+    }
+  ]
+}

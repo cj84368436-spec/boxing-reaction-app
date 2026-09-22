@@ -1,3 +1,9 @@
+# 현재 작업본: 출시 후보 (2026-09-16)
+
+이 폴더는 원본 보존 복사본 boxing-app-release-candidate이다. 최신 결과와 한계는 release/rc/검증보고서.md를 따른다. 기존 boxing-app-p0-ten-punch-playtest는 수정하지 않았다. ruleset=candidate를 앱과 브라우저에서 사용한다. 엔진47 + 앱105 + 미리보기6 검사, 타입 검사와 앱 빌드 통과. 실제 기기·사람 평가 미완료. 후보 미리보기 http://127.0.0.1:3001/?seed=123 .
+
+아래는 복사 시점의 과거 인계다.
+
 # AI 작업 인계문
 
 최신(2026-09-16): 관장 도발 → 실제 실패 이유 → 같은 패턴 재도전을 적용했다. RELEASE_PROGRESS.md 최상단과 release/rematch-loop/README.md를 우선한다. 자동 검사와 브라우저 검증은 통과했으며 재미·실제 기기 QA는 미검증이다.
