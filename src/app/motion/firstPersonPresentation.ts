@@ -1,5 +1,6 @@
 import { candidateCombatPose } from './candidateCombatPose.js';
 import { candidateFailureReason } from '../session/candidateRules.js';
+import { isWeaveInput, presentationInput } from '../session/advancedDefense.js';
 import { P0_ATTACKS } from '../../game/config/p0Attacks.js';
 import type { TenPunchSessionSnapshot } from '../session/P0TenPunchSession.js';
 import { projectFrontPose } from './projectFrontPose.js';
@@ -90,13 +91,14 @@ export function getFirstPersonFrame(
   const impactAt = start + attack.impactMs;
   const result = snapshot.results.find(r => r.attackInstanceId === visible.attackInstanceId);
   const inputState = result?.telemetry ?? (snapshot.currentAttack.attackInstanceId === visible.attackInstanceId ? snapshot.currentAttack : undefined);
-  const input = inputState?.inputStatus === 'VALID' || (candidate && inputState?.inputStatus === 'EARLY') ? inputState.inputButton : undefined;
+  const rawInput = inputState?.inputStatus === 'VALID' || (candidate && inputState?.inputStatus === 'EARLY') ? inputState.inputButton : undefined;
+  const input = presentationInput(rawInput);
   const inputAt = inputState?.inputAtMs ?? result?.telemetry.inputAtMs ?? acceptedAt.get(visible.attackInstanceId) ?? snapshot.nowMs;
   const enterMs = Math.max(1, Math.min(90, impactAt - inputAt));
   const early = inputState?.inputStatus === 'EARLY';
   const strength = input == null ? 0 : ease((snapshot.nowMs - inputAt) / enterMs) * (1 - ease((snapshot.nowMs - (early ? inputAt + 100 : impactAt + 60)) / 140));
   const direction = input === 'LEFT' ? 1 : input === 'RIGHT' ? -1 : 0;
-  const weaving = attack.punchType === 'HOOK' && input === 'RIGHT';
+  const weaving = isWeaveInput(rawInput) || (attack.punchType === 'HOOK' && input === 'RIGHT');
   // A lateral move into the lead hook does not clear its contact radius.
   // The right weave clears it vertically; a left attempt remains visibly caught.
   const failedStraight = candidate && attack.hand === 'REAR' && (input === 'RIGHT' || input === 'BACK');
@@ -128,7 +130,7 @@ export function getFirstPersonFrame(
       : result.telemetry.inputStatus === 'EARLY' ? '피격 · 너무 빠름'
         : result.telemetry.inputStatus === 'LATE' ? '피격 · 너무 늦음'
           : result.telemetry.inputStatus === 'MULTI_INPUT' ? '피격 · 하나씩 입력'
-            : candidate ? '피격 · ' + candidateFailureReason(visible.attackId, input) : '피격 · 회피 방향';
+            : candidate ? '피격 · ' + candidateFailureReason(visible.attackId, rawInput) : '피격 · 회피 방향';
   const cueActive = snapshot.nowMs >= start + attack.cueAnchorMs && age < 0;
   const hand: 'rHand' | 'lHand' = attack.hand === 'REAR' ? 'rHand' : 'lHand';
   const trail = [90, 60, 30].map(delay => project(asset, Math.max(0, elapsedMs - delay))[hand]);

@@ -2,11 +2,19 @@ export type Hand = 'LEAD' | 'REAR';
 export type PunchType = 'JAB' | 'STRAIGHT' | 'HOOK';
 export type Target = 'HEAD';
 
-export type DefenseInput = 'LEFT' | 'RIGHT' | 'BACK' | 'GUARD';
+export type BeginnerDefenseInput = 'LEFT' | 'RIGHT' | 'BACK' | 'GUARD';
+export type AdvancedDefenseInput =
+  | 'SLIP_LEFT'
+  | 'SLIP_RIGHT'
+  | 'WEAVE_LEFT'
+  | 'WEAVE_RIGHT'
+  | 'SWAY'
+  | 'GUARD';
+export type DefenseInput = BeginnerDefenseInput | AdvancedDefenseInput;
 export type InputStatus = 'VALID' | 'EARLY' | 'LATE' | 'MULTI_INPUT' | 'NO_INPUT';
 export type DefenseOutcome = 'PERFECT' | 'SAFE' | 'HIT';
 
-export type DefenseMatrix = Readonly<Record<DefenseInput, DefenseOutcome>>;
+export type DefenseMatrix = Readonly<Record<BeginnerDefenseInput, DefenseOutcome>>;
 
 export interface AttackDefinition {
   attackId: string;

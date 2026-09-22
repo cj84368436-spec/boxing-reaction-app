@@ -20,6 +20,12 @@ export function candidatePatterns(seed: number): readonly ComboDefinition[] {
 }
 export function candidateFailureReason(attackId:string,input?:string):string {
  if(input==='GUARD') return '가드 소진 · 회피로 회복하세요';
- if(attackId==='REAR_STRAIGHT_HEAD') return input==='BACK'?'전진 스트레이트 · 뒤로도 닿아요':'오른쪽은 뒷손 궤적 · 왼쪽으로 피하세요';
+ if(attackId==='LEAD_JAB_HEAD' && input?.startsWith('WEAVE')) return '잽에는 위빙보다 좌우 슬립이 정확해요';
+ if(attackId==='REAR_STRAIGHT_HEAD') {
+  if(input==='BACK'||input==='SWAY') return '전진 스트레이트 · 뒤로도 닿아요';
+  if(input?.startsWith('SLIP')||input?.startsWith('WEAVE')) return '뒷손 스트레이트는 좌 슬립으로 피하세요';
+  return '오른쪽은 뒷손 궤적 · 왼쪽으로 피하세요';
+ }
+ if(attackId==='LEAD_HOOK_HEAD' && (input?.startsWith('SLIP')||input?.startsWith('WEAVE'))) return '리드 훅은 우 위빙으로 피하세요';
  return '훅 안쪽으로 이동 · 오른쪽으로 숙이세요';
 }

@@ -17,6 +17,12 @@ import {
   type AttackAttemptTelemetry,
 } from './P0AttackAttemptController.js';
 import { createSeededComboOrder } from './seededComboOrder.js';
+import {
+  type DefenseControlMode,
+  isAdvancedDefenseInput,
+  isBeginnerDefenseInput,
+  resolveAdvancedDefense,
+} from './advancedDefense.js';
 
 interface AttackPlan {
   readonly comboId: string;
@@ -49,6 +55,7 @@ export interface TenPunchSessionResult extends TenPunchSessionAttack {
 
 export interface TenPunchSessionSnapshot {
   readonly ruleset?: 'candidate' | 'baseline';
+  readonly controlMode: DefenseControlMode;
   readonly guardEnergy?: number;
   readonly runId: string;
   readonly seed: number;
@@ -67,6 +74,7 @@ export interface TenPunchSessionSnapshot {
 
 interface TenPunchSessionOptions {
   readonly ruleset?: 'candidate' | 'baseline';
+  readonly controlMode?: DefenseControlMode;
   readonly seed?: number;
   readonly seedFactory?: () => number;
 }
@@ -83,6 +91,7 @@ export class P0TenPunchSession {
   private readonly seedFactory: () => number;
   private runNumber = 1;
   private readonly ruleset: 'candidate' | 'baseline';
+  private readonly controlMode: DefenseControlMode;
   private guardEnergy = GUARD_CAPACITY;
   private seed: number;
   private plans: readonly AttackPlan[];
@@ -98,6 +107,7 @@ export class P0TenPunchSession {
   ) {
     this.clock = clock;
     this.ruleset = options.ruleset ?? 'baseline';
+    this.controlMode = options.controlMode ?? 'BEGINNER';
     this.motionSourceIds = motionSourceIds;
     this.seedFactory = options.seedFactory ?? DEFAULT_SEED_FACTORY;
     this.seed = this.normalizeSeed(options.seed ?? this.seedFactory());
@@ -195,6 +205,7 @@ export class P0TenPunchSession {
 
     return {
       ruleset: this.ruleset,
+      controlMode: this.controlMode,
       guardEnergy: this.guardEnergy,
       runId: this.runId,
       seed: this.seed,
@@ -279,7 +290,13 @@ export class P0TenPunchSession {
               if (this.guardEnergy === 0) return 'HIT';
               this.guardEnergy--; return 'SAFE';
             }
-            const outcome = plan.attack.defenseMatrix[input];
+            const outcome = this.controlMode === 'ADVANCED'
+              ? isAdvancedDefenseInput(input)
+                ? resolveAdvancedDefense(plan.attack.attackId, input)
+                : 'HIT'
+              : isBeginnerDefenseInput(input)
+                ? plan.attack.defenseMatrix[input]
+                : 'HIT';
             if (outcome !== 'HIT') this.guardEnergy = Math.min(GUARD_CAPACITY, this.guardEnergy + 1);
             return outcome;
           }}),

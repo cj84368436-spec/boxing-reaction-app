@@ -1,4 +1,5 @@
 import { candidateFailureReason, CANDIDATE_ATTACKS } from '../session/candidateRules.js';
+import { isAdvancedDefenseInput, resolveAdvancedDefense } from '../session/advancedDefense.js';
 import { P0_ATTACKS } from '../../game/config/p0Attacks.js';
 import { coachVerdict } from './boxingArtwork.js';
 import type { TenPunchSessionResult, TenPunchSessionSnapshot } from '../session/P0TenPunchSession.js';
@@ -36,7 +37,11 @@ export function getRematchReview(results: readonly TenPunchSessionResult[], spee
   const closeLate = hits.map(result => {
     const attack = candidate ? CANDIDATE_ATTACKS[result.attackId] : P0_ATTACKS[result.attackId as keyof typeof P0_ATTACKS];
     const {inputAtMs, inputButton, inputStatus, attackStartScheduledAtMs} = result.telemetry;
-    if (!attack || inputStatus !== 'LATE' || inputAtMs == null || inputButton == null || attack.defenseMatrix[inputButton] === 'HIT') return null;
+    if (!attack || inputStatus !== 'LATE' || inputAtMs == null || inputButton == null) return null;
+    const inputOutcome = isAdvancedDefenseInput(inputButton)
+      ? resolveAdvancedDefense(result.attackId, inputButton)
+      : attack.defenseMatrix[inputButton];
+    if (inputOutcome === 'HIT') return null;
     const lateMs = (inputAtMs - attackStartScheduledAtMs - attack.responseWindowEndMs) / roundSpeed;
     return lateMs > 0 && lateMs <= 80 ? {result, lateMs} : null;
   }).filter((entry): entry is NonNullable<typeof entry> => entry !== null).sort((a,b) => a.lateMs - b.lateMs)[0];
