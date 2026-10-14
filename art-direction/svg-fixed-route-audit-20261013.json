@@ -1,0 +1,202 @@
+{
+  "deploymentId": "01a1347e-cc43-7b0d-a7d6-256c0188f115",
+  "scope": "packaged route code and local React Navigation URL parser; native host and rendering excluded",
+  "bundles": [
+    {
+      "entry": "bundle.ios.0_84_0.js",
+      "syntax": "valid in Node VM",
+      "keys": [
+        "./index.tsx",
+        "./_404.tsx"
+      ],
+      "rootComponent": "P0GameScreen",
+      "rootPath": "/",
+      "negative404Control": "reproduced exact exception",
+      "rootMapAloneDoesNotProveRegisteredScreen": true,
+      "SDKRegistrationReplay": {
+        "sameRegistry": "previous root retained despite new context; old 404 exception persists",
+        "clearedRegistry": "new context registered; no missing-404 exception",
+        "actualDeviceRegistryPersistence": "unknown"
+      },
+      "URLs": [
+        {
+          "url": "intoss://boxing-talent-test",
+          "extractedPath": "",
+          "screen": "/"
+        },
+        {
+          "url": "intoss://boxing-talent-test/",
+          "extractedPath": "/",
+          "screen": "/"
+        },
+        {
+          "url": "intoss://boxing-talent-test?_deploymentId=01a1347e-cc43-7b0d-a7d6-256c0188f115",
+          "extractedPath": "?_deploymentId=01a1347e-cc43-7b0d-a7d6-256c0188f115",
+          "screen": "/"
+        },
+        {
+          "url": "intoss://boxing-talent-test/index",
+          "extractedPath": "/index",
+          "screen": "/_404"
+        },
+        {
+          "url": "intoss://boxing-talent-test/not-a-page",
+          "extractedPath": "/not-a-page",
+          "screen": "/_404"
+        },
+        {
+          "url": "intoss-private://boxing-talent-test?_deploymentId=01a1347e-cc43-7b0d-a7d6-256c0188f115",
+          "extractedPath": null,
+          "screen": null
+        }
+      ]
+    },
+    {
+      "entry": "bundle.android.0_84_0.js",
+      "syntax": "valid in Node VM",
+      "keys": [
+        "./index.tsx",
+        "./_404.tsx"
+      ],
+      "rootComponent": "P0GameScreen",
+      "rootPath": "/",
+      "negative404Control": "reproduced exact exception",
+      "rootMapAloneDoesNotProveRegisteredScreen": true,
+      "SDKRegistrationReplay": {
+        "sameRegistry": "previous root retained despite new context; old 404 exception persists",
+        "clearedRegistry": "new context registered; no missing-404 exception",
+        "actualDeviceRegistryPersistence": "unknown"
+      },
+      "URLs": [
+        {
+          "url": "intoss://boxing-talent-test",
+          "extractedPath": "",
+          "screen": "/"
+        },
+        {
+          "url": "intoss://boxing-talent-test/",
+          "extractedPath": "/",
+          "screen": "/"
+        },
+        {
+          "url": "intoss://boxing-talent-test?_deploymentId=01a1347e-cc43-7b0d-a7d6-256c0188f115",
+          "extractedPath": "?_deploymentId=01a1347e-cc43-7b0d-a7d6-256c0188f115",
+          "screen": "/"
+        },
+        {
+          "url": "intoss://boxing-talent-test/index",
+          "extractedPath": "/index",
+          "screen": "/_404"
+        },
+        {
+          "url": "intoss://boxing-talent-test/not-a-page",
+          "extractedPath": "/not-a-page",
+          "screen": "/_404"
+        },
+        {
+          "url": "intoss-private://boxing-talent-test?_deploymentId=01a1347e-cc43-7b0d-a7d6-256c0188f115",
+          "extractedPath": null,
+          "screen": null
+        }
+      ]
+    },
+    {
+      "entry": "bundle.ios.0_72_6.js",
+      "syntax": "valid in Node VM",
+      "keys": [
+        "./index.tsx",
+        "./_404.tsx"
+      ],
+      "rootComponent": "P0GameScreen",
+      "rootPath": "/",
+      "negative404Control": "reproduced exact exception",
+      "rootMapAloneDoesNotProveRegisteredScreen": true,
+      "SDKRegistrationReplay": {
+        "sameRegistry": "previous root retained despite new context; old 404 exception persists",
+        "clearedRegistry": "new context registered; no missing-404 exception",
+        "actualDeviceRegistryPersistence": "unknown"
+      },
+      "URLs": [
+        {
+          "url": "intoss://boxing-talent-test",
+          "extractedPath": "",
+          "screen": "/"
+        },
+        {
+          "url": "intoss://boxing-talent-test/",
+          "extractedPath": "/",
+          "screen": "/"
+        },
+        {
+          "url": "intoss://boxing-talent-test?_deploymentId=01a1347e-cc43-7b0d-a7d6-256c0188f115",
+          "extractedPath": "?_deploymentId=01a1347e-cc43-7b0d-a7d6-256c0188f115",
+          "screen": "/"
+        },
+        {
+          "url": "intoss://boxing-talent-test/index",
+          "extractedPath": "/index",
+          "screen": "/_404"
+        },
+        {
+          "url": "intoss://boxing-talent-test/not-a-page",
+          "extractedPath": "/not-a-page",
+          "screen": "/_404"
+        },
+        {
+          "url": "intoss-private://boxing-talent-test?_deploymentId=01a1347e-cc43-7b0d-a7d6-256c0188f115",
+          "extractedPath": null,
+          "screen": null
+        }
+      ]
+    },
+    {
+      "entry": "bundle.android.0_72_6.js",
+      "syntax": "valid in Node VM",
+      "keys": [
+        "./index.tsx",
+        "./_404.tsx"
+      ],
+      "rootComponent": "P0GameScreen",
+      "rootPath": "/",
+      "negative404Control": "reproduced exact exception",
+      "rootMapAloneDoesNotProveRegisteredScreen": true,
+      "SDKRegistrationReplay": {
+        "sameRegistry": "previous root retained despite new context; old 404 exception persists",
+        "clearedRegistry": "new context registered; no missing-404 exception",
+        "actualDeviceRegistryPersistence": "unknown"
+      },
+      "URLs": [
+        {
+          "url": "intoss://boxing-talent-test",
+          "extractedPath": "",
+          "screen": "/"
+        },
+        {
+          "url": "intoss://boxing-talent-test/",
+          "extractedPath": "/",
+          "screen": "/"
+        },
+        {
+          "url": "intoss://boxing-talent-test?_deploymentId=01a1347e-cc43-7b0d-a7d6-256c0188f115",
+          "extractedPath": "?_deploymentId=01a1347e-cc43-7b0d-a7d6-256c0188f115",
+          "screen": "/"
+        },
+        {
+          "url": "intoss://boxing-talent-test/index",
+          "extractedPath": "/index",
+          "screen": "/_404"
+        },
+        {
+          "url": "intoss://boxing-talent-test/not-a-page",
+          "extractedPath": "/not-a-page",
+          "screen": "/_404"
+        },
+        {
+          "url": "intoss-private://boxing-talent-test?_deploymentId=01a1347e-cc43-7b0d-a7d6-256c0188f115",
+          "extractedPath": null,
+          "screen": null
+        }
+      ]
+    }
+  ]
+}

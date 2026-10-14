@@ -1,4 +1,6 @@
+import { survivalPatterns, type Level } from './survivalRules.js';
 import { candidatePatterns, GUARD_CAPACITY } from './candidateRules.js';
+import { extraDefenseOutcome, isExtraDefense, type DefenseControlInput } from './advancedDefense.js';
 import { P0_SEQUENCE } from '../../game/config/p0Sequence.js';
 import { P0_TIMING } from '../../game/config/p0Timing.js';
 import type { GameClock } from '../../game/engine/GameClock.js';
@@ -17,12 +19,6 @@ import {
   type AttackAttemptTelemetry,
 } from './P0AttackAttemptController.js';
 import { createSeededComboOrder } from './seededComboOrder.js';
-import {
-  type DefenseControlMode,
-  isAdvancedDefenseInput,
-  isBeginnerDefenseInput,
-  resolveAdvancedDefense,
-} from './advancedDefense.js';
 
 interface AttackPlan {
   readonly comboId: string;
@@ -55,8 +51,9 @@ export interface TenPunchSessionResult extends TenPunchSessionAttack {
 
 export interface TenPunchSessionSnapshot {
   readonly ruleset?: 'candidate' | 'baseline';
-  readonly controlMode: DefenseControlMode;
   readonly guardEnergy?: number;
+  readonly livesRemaining?: number;
+  readonly knockedOut?: boolean;
   readonly runId: string;
   readonly seed: number;
   readonly comboOrderIds: readonly string[];
@@ -73,8 +70,9 @@ export interface TenPunchSessionSnapshot {
 }
 
 interface TenPunchSessionOptions {
+  readonly maxHits?: number;
+  readonly survivalLevel?: Level;
   readonly ruleset?: 'candidate' | 'baseline';
-  readonly controlMode?: DefenseControlMode;
   readonly seed?: number;
   readonly seedFactory?: () => number;
 }
@@ -91,8 +89,9 @@ export class P0TenPunchSession {
   private readonly seedFactory: () => number;
   private runNumber = 1;
   private readonly ruleset: 'candidate' | 'baseline';
-  private readonly controlMode: DefenseControlMode;
   private guardEnergy = GUARD_CAPACITY;
+  private readonly maxHits: number | undefined;
+  private readonly survivalLevel: Level | undefined;
   private seed: number;
   private plans: readonly AttackPlan[];
   private comboOrderIds: readonly string[];
@@ -106,8 +105,11 @@ export class P0TenPunchSession {
     options: TenPunchSessionOptions = {},
   ) {
     this.clock = clock;
+    if (options.maxHits != null && (!Number.isInteger(options.maxHits) || options.maxHits < 1)) throw new Error('maxHits must be a positive integer');
+    this.maxHits = options.maxHits;
+    if(options.survivalLevel!=null && (options.ruleset!=='candidate' || ![1,2,3].includes(options.survivalLevel)))throw new Error('Survival needs candidate rules and a valid level');
+    this.survivalLevel=options.survivalLevel;
     this.ruleset = options.ruleset ?? 'baseline';
-    this.controlMode = options.controlMode ?? 'BEGINNER';
     this.motionSourceIds = motionSourceIds;
     this.seedFactory = options.seedFactory ?? DEFAULT_SEED_FACTORY;
     this.seed = this.normalizeSeed(options.seed ?? this.seedFactory());
@@ -134,7 +136,7 @@ export class P0TenPunchSession {
 
   retry({ leadInMs = 0, seed }: TenPunchRetryOptions = {}): void {
     if (!this.snapshot().sessionCompleted) {
-      throw new Error('Session can only retry after all attacks resolve');
+      throw new Error('Session can only retry after the round ends');
     }
 
     this.runNumber += 1;
@@ -152,14 +154,18 @@ export class P0TenPunchSession {
 
   tick(): TenPunchSessionSnapshot {
     for (const attack of this.attacks) {
+      if (this.knockedOut) break;
       attack.controller.tick();
+      this.collectResults();
     }
-    this.collectResults();
     return this.snapshot();
   }
 
-  handleInput(input: DefenseInput): AttackAttemptInputReceipt {
-    if (this.results.length === this.attacks.length) {
+  handleInput(input: DefenseControlInput): AttackAttemptInputReceipt {
+    if (isExtraDefense(input) && this.survivalLevel !== 3) {
+      throw new Error('Champion-only defense input');
+    }
+    if (this.knockedOut || this.results.length === this.attacks.length) {
       throw new Error('Completed session cannot accept defense input');
     }
 
@@ -174,7 +180,7 @@ export class P0TenPunchSession {
       ? unresolved
       : this.attacks[unresolvedIndex + 1];
     const routed = routeInput(
-      { atMs: nowMs, input },
+      { atMs: nowMs, input: input as DefenseInput },
       {
         current: this.windowFor(routingCurrent),
         currentResolved: routingCurrent.controller.snapshot().outcome != null,
@@ -193,7 +199,7 @@ export class P0TenPunchSession {
       return target.controller.acceptRoutedInput(routed);
     }
 
-    return unresolved.controller.handleInput(input);
+    return unresolved.controller.handleInput(input as DefenseInput);
   }
 
   snapshot(): TenPunchSessionSnapshot {
@@ -205,8 +211,8 @@ export class P0TenPunchSession {
 
     return {
       ruleset: this.ruleset,
-      controlMode: this.controlMode,
       guardEnergy: this.guardEnergy,
+      ...(this.maxHits == null ? {} : {livesRemaining: Math.max(0, this.maxHits - this.hitCount), knockedOut: this.knockedOut}),
       runId: this.runId,
       seed: this.seed,
       comboOrderIds: this.comboOrderIds,
@@ -227,9 +233,12 @@ export class P0TenPunchSession {
       })),
       results: this.results,
       latestResult: this.results.at(-1),
-      sessionCompleted: this.results.length === this.attacks.length,
+      sessionCompleted: this.knockedOut || this.results.length === this.attacks.length,
     };
   }
+
+  private get hitCount(): number { return this.results.filter(result => result.outcome === 'HIT').length; }
+  private get knockedOut(): boolean { return this.maxHits != null && this.hitCount >= this.maxHits; }
 
   private get runId(): string {
     return `run-${this.runNumber}`;
@@ -243,7 +252,7 @@ export class P0TenPunchSession {
   }
 
   private createRunPlan(): { plans: readonly AttackPlan[]; comboOrderIds: readonly string[] } {
-    const comboOrder = this.ruleset === 'candidate' ? candidatePatterns(this.seed) : createSeededComboOrder(P0_SEQUENCE, this.seed);
+    const comboOrder = this.survivalLevel ? survivalPatterns(this.seed, this.survivalLevel) : this.ruleset === 'candidate' ? candidatePatterns(this.seed) : createSeededComboOrder(P0_SEQUENCE, this.seed);
     const plans: AttackPlan[] = [];
     let comboStartOffsetMs = 0;
 
@@ -286,17 +295,16 @@ export class P0TenPunchSession {
           clock: this.clock,
           timelineMode: 'ABSOLUTE_SCHEDULE',
           ...(this.ruleset !== 'candidate' ? {} : { allowEarlyRecovery: true, resolveInput: (input: DefenseInput): DefenseOutcome => {
+            if (this.survivalLevel === 3 && isExtraDefense(input as DefenseControlInput)) {
+              const outcome = extraDefenseOutcome(plan.attack.attackId, input as 'DUCK' | 'STEP_IN');
+              if (outcome !== 'HIT') this.guardEnergy = Math.min(GUARD_CAPACITY, this.guardEnergy + 1);
+              return outcome;
+            }
             if (input === 'GUARD') {
               if (this.guardEnergy === 0) return 'HIT';
               this.guardEnergy--; return 'SAFE';
             }
-            const outcome = this.controlMode === 'ADVANCED'
-              ? isAdvancedDefenseInput(input)
-                ? resolveAdvancedDefense(plan.attack.attackId, input)
-                : 'HIT'
-              : isBeginnerDefenseInput(input)
-                ? plan.attack.defenseMatrix[input]
-                : 'HIT';
+            const outcome = plan.attack.defenseMatrix[input];
             if (outcome !== 'HIT') this.guardEnergy = Math.min(GUARD_CAPACITY, this.guardEnergy + 1);
             return outcome;
           }}),
@@ -306,6 +314,7 @@ export class P0TenPunchSession {
   }
 
   private currentAttackIndex(): number {
+    if (this.knockedOut) return this.results.at(-1)!.attackIndex;
     const unresolvedIndex = this.attacks.findIndex(
       (attack) => attack.controller.snapshot().gameState !== 'FINISHED',
     );

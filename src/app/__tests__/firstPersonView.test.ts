@@ -3,6 +3,7 @@ import { sampleLeadJabReadyPose } from '../motion/leadJabReadyPose';
 import { getP0MotionAsset, getP0MotionSourceIds } from '../motion/p0MotionRegistry';
 import { P0TenPunchSession } from '../session/P0TenPunchSession';
 import * as presentation from '../motion/firstPersonPresentation';
+import { candidateCombatPose } from '../motion/candidateCombatPose';
 
 describe('fixed spectator camera', () => {
   it('does not move an unchanged hand when the shoulders turn', () => {
@@ -132,5 +133,27 @@ describe('first-person attack and defense presentation', () => {
     const recovered = presentation.getFirstPersonFrame(session.tick(), assets, times);
     expect(recovered.cameraX).toBe(0);
     expect(recovered.cameraY).toBe(0);
+  });
+  it('keeps the fifth-hit frame frozen instead of showing the ninth attack after knockout', () => {
+    const clock = { value: 0, nowMs() { return this.value; } };
+    const session = new P0TenPunchSession(clock, getP0MotionSourceIds(), { seed: 124, ruleset: 'candidate', survivalLevel: 1, maxHits: 5 });
+    session.start();
+    const schedule = session.snapshot().scheduledAttacks;
+    for (let index = 0; index <= 7; index++) {
+      const attack = schedule[index]!;
+      clock.value = attack.attackStartScheduledAtMs! + 300;
+      session.tick();
+      if (index >= 4 && index <= 6) session.handleInput(attack.attackId === 'LEAD_HOOK_HEAD' ? 'RIGHT' : 'LEFT');
+      clock.value = attack.attackStartScheduledAtMs! + 650;
+      session.tick();
+    }
+    const knockedOut = session.snapshot();
+    expect(knockedOut.results.map(result => result.outcome === 'HIT' ? 'HIT' : 'DEFEND')).toEqual(['HIT','HIT','HIT','HIT','DEFEND','DEFEND','DEFEND','HIT']);
+    expect(knockedOut.knockedOut).toBe(true);
+    clock.value = schedule[8]!.attackStartScheduledAtMs! + 130;
+    const frame = presentation.getFirstPersonFrame(session.tick(), assets, new Map());
+    expect(frame.attackId).toBe(knockedOut.latestResult?.attackId);
+    expect(frame.pose).toEqual(candidateCombatPose(frame.attackId, frame.elapsedMs));
+    expect(frame.cueActive).toBe(false);
   });
 });

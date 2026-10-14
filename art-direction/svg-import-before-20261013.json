@@ -1,0 +1,200 @@
+{
+  "before": {
+    "file": "C:\\Users\\cj799\\OneDrive\\바탕 화면\\미니앱\\복싱 재능 테스트\\boxing-app-starter-windows\\boxing-app-cartoon-rebuild\\release-backup\\boxing-talent-test-20261013-before-svg-interop.ait",
+    "deploymentId": "01a1343d-f2d4-78ba-8a4e-4f675ba5d12c",
+    "bytes": 6918607,
+    "sha256": "039a4a5f180886572f82df4c028ef7af9541d79b8be8b1a95853c6e7b32f30ab",
+    "scope": "compiled import and JSX type expressions; shared namespace modeled; native rendering excluded",
+    "bundles": [
+      {
+        "entry": "bundle.ios.0_84_0.js",
+        "results": [
+          {
+            "name": "BoxerRig",
+            "esModule": true,
+            "compiledType": "import_react_native_svg20.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "BoxerRig",
+            "esModule": false,
+            "compiledType": "import_react_native_svg20.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "CoachReaction",
+            "esModule": true,
+            "compiledType": "import_react_native_svg21.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "CoachReaction",
+            "esModule": false,
+            "compiledType": "import_react_native_svg21.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "SpriteImage",
+            "esModule": true,
+            "compiledType": "import_react_native_svg18.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "SpriteImage",
+            "esModule": false,
+            "compiledType": "import_react_native_svg18.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          }
+        ]
+      },
+      {
+        "entry": "bundle.android.0_84_0.js",
+        "results": [
+          {
+            "name": "BoxerRig",
+            "esModule": true,
+            "compiledType": "import_react_native_svg20.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "BoxerRig",
+            "esModule": false,
+            "compiledType": "import_react_native_svg20.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "CoachReaction",
+            "esModule": true,
+            "compiledType": "import_react_native_svg21.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "CoachReaction",
+            "esModule": false,
+            "compiledType": "import_react_native_svg21.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "SpriteImage",
+            "esModule": true,
+            "compiledType": "import_react_native_svg18.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "SpriteImage",
+            "esModule": false,
+            "compiledType": "import_react_native_svg18.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          }
+        ]
+      },
+      {
+        "entry": "bundle.ios.0_72_6.js",
+        "results": [
+          {
+            "name": "BoxerRig",
+            "esModule": true,
+            "compiledType": "import_react_native_svg20.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "BoxerRig",
+            "esModule": false,
+            "compiledType": "import_react_native_svg20.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "CoachReaction",
+            "esModule": true,
+            "compiledType": "import_react_native_svg21.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "CoachReaction",
+            "esModule": false,
+            "compiledType": "import_react_native_svg21.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "SpriteImage",
+            "esModule": true,
+            "compiledType": "import_react_native_svg18.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "SpriteImage",
+            "esModule": false,
+            "compiledType": "import_react_native_svg18.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          }
+        ]
+      },
+      {
+        "entry": "bundle.android.0_72_6.js",
+        "results": [
+          {
+            "name": "BoxerRig",
+            "esModule": true,
+            "compiledType": "import_react_native_svg20.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "BoxerRig",
+            "esModule": false,
+            "compiledType": "import_react_native_svg20.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "CoachReaction",
+            "esModule": true,
+            "compiledType": "import_react_native_svg21.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "CoachReaction",
+            "esModule": false,
+            "compiledType": "import_react_native_svg21.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "SpriteImage",
+            "esModule": true,
+            "compiledType": "import_react_native_svg18.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "SpriteImage",
+            "esModule": false,
+            "compiledType": "import_react_native_svg18.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          }
+        ]
+      }
+    ]
+  },
+  "after": null
+}

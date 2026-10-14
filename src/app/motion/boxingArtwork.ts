@@ -128,7 +128,7 @@ export function buildPlayerGloves(guard: number): readonly ArtworkNode[] {
 }
 
 export type CoachMood = 'smirk' | 'interested' | 'surprised';
-export const COACH_INTRO = { mood: 'smirk' as const, line: '열 번. 한 대도 안 맞으면 인정하지.', note: '관장이 지켜봅니다. 열 번을 막고 인정을 받아내세요.' };
+export const COACH_INTRO = { mood: 'smirk' as const, line: '서른 번. 끝까지 서 있으면 인정하지.', note: '' };
 export function coachVerdict(counts: Readonly<{ PERFECT: number; SAFE: number; HIT: number }>) {
   if (counts.PERFECT === 10) return { mood: 'surprised' as const, line: '……어? 한 대도 안 맞았어?', note: '열 번 모두 완벽 회피. 관장이 팔짱을 풀었습니다.' };
   if (counts.HIT === 0) return { mood: 'interested' as const, line: '빈틈이 없군. 제법이야.', note: '열 번 모두 방어. 다음엔 회피도 노려보세요.' };

@@ -1,0 +1,278 @@
+[
+  {
+    "path": "src\\_app.tsx",
+    "hash": "D6F70755C844DAF65B7199E291EC460E97F16912598DCCCA25AE577361D53036"
+  },
+  {
+    "path": "src\\router.gen.ts",
+    "hash": "EC5FA6F012BBACA9DD3BF88C8FDA18B14287C0423AFD41787F8843E960E959E8"
+  },
+  {
+    "path": "src\\app\\canonicalEngineImports.ts",
+    "hash": "26B21642E3E710819E6480E5F6641D7C8B294E350FA8E034F81BCE77DBBAF080"
+  },
+  {
+    "path": "src\\app\\assets\\sfx\\evade.wav",
+    "hash": "894A3FCF67ADEA0F4ECFAD5892EED05DF2D7CF394F5658B014998FC63792BCE6"
+  },
+  {
+    "path": "src\\app\\assets\\sfx\\guard.wav",
+    "hash": "D1ED8C52CCB99E487F24A1571FA5F6DD66BDBB317A302F694842C09B68C6DCC7"
+  },
+  {
+    "path": "src\\app\\assets\\sfx\\hit.wav",
+    "hash": "8A3965EC19EE58BAF001216D2CA5A2F0FF229386582F4B77FEBAE4A62312A977"
+  },
+  {
+    "path": "src\\app\\assets\\sfx\\hitHook.wav",
+    "hash": "88E16A09219335221DB7BF1C30E1DE36F7C9CD397F5B3D9CEDB3EE3EB030C9A0"
+  },
+  {
+    "path": "src\\app\\assets\\sfx\\hitJab.wav",
+    "hash": "DE048DFD2F0DACC4D9481D689C484B7EA17E331D8C56FCEA7A19CE84D45D7C24"
+  },
+  {
+    "path": "src\\app\\assets\\sfx\\hitStraight.wav",
+    "hash": "8BCD68ECC080D5B2C05B2C334550740B50D9EBE658BDCDD1C4CD0608CB540354"
+  },
+  {
+    "path": "src\\app\\assets\\sfx\\playtestSfxData.ts",
+    "hash": "D4BDA19BA78F2A4FA36CA4D4FDDD0134C9249A2C26BD2E88D03AAC11E7D1BACD"
+  },
+  {
+    "path": "src\\app\\assets\\sfx\\recognition.wav",
+    "hash": "EFD5ABE7B4DA634C1A93EFE48D84F020C89D6A8F3EDC86821B45CB2578D0B662"
+  },
+  {
+    "path": "src\\app\\components\\BoxerRig.tsx",
+    "hash": "895EC64EEB33B8F4750A5F37DCC8BB3691152D94AEEBA1D211CE15CA824EDB88"
+  },
+  {
+    "path": "src\\app\\components\\CoachReaction.tsx",
+    "hash": "DD4C3259717DE97B9084A9BFBDB76E199ACEB435A4C274D9A07B46F317466866"
+  },
+  {
+    "path": "src\\app\\components\\DefenseControls.tsx",
+    "hash": "2D39137D2C593F7D488925D1530163BA5F7DB0B8F79857C3BE32751DED21070C"
+  },
+  {
+    "path": "src\\app\\components\\PlayerDefenseFeedback.tsx",
+    "hash": "1051171C0B650F31B27DED04D8A58E4FCF7D2B46F603A2452B8810DE40BD8D7D"
+  },
+  {
+    "path": "src\\app\\components\\TemporarySfxPlayer.tsx",
+    "hash": "F38554CFC373035D2E77EADCB47BB3575E92F219339BC263ECE8D3D561829398"
+  },
+  {
+    "path": "src\\app\\components\\VectorArtwork.tsx",
+    "hash": "29C41966041CEC0E86C7A86366803EF3EE389BE0D4A89321DA5E851603051362"
+  },
+  {
+    "path": "src\\app\\motion\\boxingArtwork.ts",
+    "hash": "49C5995329ADF087A8ECD448DD542CEA9214457C9CA8A45C485F9D716F517207"
+  },
+  {
+    "path": "src\\app\\motion\\buildBoxerRig.ts",
+    "hash": "70E415A56E17035CD3F2DC97D93989A9A11BC2C57F21AD970D307DE9CB4DC1E8"
+  },
+  {
+    "path": "src\\app\\motion\\candidateCombatPose.ts",
+    "hash": "A46A0DD224C3EC52A1D839A05D126EF48414638E2EBE6288AF7B157DC8C2EDEA"
+  },
+  {
+    "path": "src\\app\\motion\\coachPresentation.ts",
+    "hash": "E7D4D62BA9310132AA952A09D2DCF316122F2CA6A6E782C4F1CBA4AF89700F78"
+  },
+  {
+    "path": "src\\app\\motion\\firstPersonPresentation.ts",
+    "hash": "EAC0F011EF3AAD6BE5139D23A8A894AD1AB85366A7630C0639388D4C57891F3E"
+  },
+  {
+    "path": "src\\app\\motion\\leadJabReadyPose.ts",
+    "hash": "42DB950002965076ADAF922411BC1547EC545ADA27FE7C7FC468019715C6316D"
+  },
+  {
+    "path": "src\\app\\motion\\p0MotionRegistry.ts",
+    "hash": "316A6E47028C9B240ADE08D19E5AC87880EBB37CBFB6940F2E1A06BD6A59A503"
+  },
+  {
+    "path": "src\\app\\motion\\projectFrontPose.ts",
+    "hash": "7334DB30DC0135CEA4C8AD86CC48868553BC32D3198C8BA071F11FCE05D27A1A"
+  },
+  {
+    "path": "src\\app\\motion\\sampleMotionPose.ts",
+    "hash": "2D228D8C48CC52E5C3AF781A0BB2745EF7DEE8F17105BAF4D1CB0D9E27A2704B"
+  },
+  {
+    "path": "src\\app\\motion\\types.ts",
+    "hash": "7AB8BCAF7D1AF7AD1149E5C5B63F2435CB0DD2677D13D70BF65F0DA22DAB1F59"
+  },
+  {
+    "path": "src\\app\\screens\\P0GameScreen.tsx",
+    "hash": "7BCCB1E0E8BBDC16ADBDD4A9D8B3D91F4F5306CC865E6202EF8E4B4C1F0AED6E"
+  },
+  {
+    "path": "src\\app\\session\\candidateRules.ts",
+    "hash": "634A0F50DA4AED75DD328BD6BB938659396EAAE87604B332B689B215806B6945"
+  },
+  {
+    "path": "src\\app\\session\\leadJabSessionConfig.ts",
+    "hash": "5A3D2E82BE2A45BCACCA2F0F0DDD22C8D5073B3E874A1BCFFD28E973571ABA5D"
+  },
+  {
+    "path": "src\\app\\session\\P0AttackAttemptController.ts",
+    "hash": "92F0219BD36014F4CBF8B6CE4E6C8663374051BFA3848A4A02042DFA979CF9DD"
+  },
+  {
+    "path": "src\\app\\session\\P0LeadJabSession.ts",
+    "hash": "657BC9973A76E0112E58C9F6CDE0ED8067B04FF0B863520396AFE434C892DD9C"
+  },
+  {
+    "path": "src\\app\\session\\P0SingleAttackSession.ts",
+    "hash": "7090462B0B626CE1CAA150A530B58FFC13477035DBC1C8F5CDF9AFFF483CD8CB"
+  },
+  {
+    "path": "src\\app\\session\\P0TenPunchSession.ts",
+    "hash": "F39BDD4F98E047AEB1B1709A5FC1703FA6671EB81795B9160E7B3F883DF26B89"
+  },
+  {
+    "path": "src\\app\\session\\P0ThreeSingleAttackSession.ts",
+    "hash": "BA360F306AD1385AC8959BA0CF5DD377704146008C73B7F45932D18943866161"
+  },
+  {
+    "path": "src\\app\\session\\RoundClock.ts",
+    "hash": "A52C707C94A5AEA50D979D155D89BB3BAD4262BEC7CF448602A21746863371A1"
+  },
+  {
+    "path": "src\\app\\session\\seededComboOrder.ts",
+    "hash": "C47304AA9DA8490AF45470C20F861DE48AE6AA30472EDB804E08C487E3D9BCED"
+  },
+  {
+    "path": "src\\app\\__tests__\\boxingArtwork.test.ts",
+    "hash": "94EBE729EC068BD7A97F489540C8296D6558B7DE35EC5CCE7E66AA244FBFB50A"
+  },
+  {
+    "path": "src\\app\\__tests__\\candidateAdversarial.test.ts",
+    "hash": "F33BB5BA013D85DA28EC81F592402634288F20529F3C6C687962FE739CC38A95"
+  },
+  {
+    "path": "src\\app\\__tests__\\canonicalImports.test.ts",
+    "hash": "8F34F523F3562DB480639BF982928C08288B777CF278BFCCE59B391836ECDDD4"
+  },
+  {
+    "path": "src\\app\\__tests__\\coachPresentation.test.ts",
+    "hash": "FD3DBE689DE13CD4578BB152D0CA801DC2C31EA47BBF9C51D22F2C18100ED9FF"
+  },
+  {
+    "path": "src\\app\\__tests__\\firstInputCommitment.test.ts",
+    "hash": "423E52B24E833F9E3626E51007BBA1CD7D196343F1D510DAFF576C3C0599ABED"
+  },
+  {
+    "path": "src\\app\\__tests__\\firstPersonView.test.ts",
+    "hash": "5B3264996EC658CD9A64A2144BF75225BD375FED7BF1E8E11F9A9733B91F049A"
+  },
+  {
+    "path": "src\\app\\__tests__\\motionPipeline.test.ts",
+    "hash": "700507ECD4C1D4985EDAFC7E6E8BDCD3E817AE43202F20E5155C8DBF4D231FBA"
+  },
+  {
+    "path": "src\\app\\__tests__\\P0AttackAttemptController.test.ts",
+    "hash": "D28A7174B00575C9C3D0893936A9B60787319264403EF8A868ED014FD3AD155B"
+  },
+  {
+    "path": "src\\app\\__tests__\\P0GameScreen.test.tsx",
+    "hash": "2935DCB42304D6843196C7DE24282C31BDF7D1FEF11DB02EB4634879E3BDE046"
+  },
+  {
+    "path": "src\\app\\__tests__\\P0LeadJabSession.test.ts",
+    "hash": "760C88C562CEFBD794BFA2F4B47C6393C637A5B0151FA0F730F15F70FABDCDD0"
+  },
+  {
+    "path": "src\\app\\__tests__\\P0TenPunchSession.test.ts",
+    "hash": "A810173E131B209C1D77FBBE40192CBD6ADA022B82EC1EE82F7D2F9922BC3F8B"
+  },
+  {
+    "path": "src\\app\\__tests__\\P0ThreeSingleAttackSession.test.ts",
+    "hash": "EC31000391541ED80E8A00B6C406C5F76EC54DCD8B5903531A1139E37EF325E6"
+  },
+  {
+    "path": "src\\app\\__tests__\\playableRound.test.ts",
+    "hash": "6F3E956CD8F762C309759D0E99B261C8724C4B05D689058501A6521F36093996"
+  },
+  {
+    "path": "src\\app\\__tests__\\releaseCandidate.test.ts",
+    "hash": "CE8B52FC0C8C94E399C4ACBAF0D5F2C9566BA0CA6E98FC89DA58C03A568C8BA7"
+  },
+  {
+    "path": "src\\app\\__tests__\\rematchReview.test.ts",
+    "hash": "8AFD755488C89C7B003C5BB896CDCB1855B6A540B659C1628625FD37BA4B8E60"
+  },
+  {
+    "path": "src\\app\\__tests__\\TemporarySfxPlayer.test.tsx",
+    "hash": "D16C58D33FAF8A835B38F4A083CD64F238A8AF611FB13EE8579995192FA7093F"
+  },
+  {
+    "path": "src\\game\\assets\\motion\\lead-hook.json",
+    "hash": "B84F93C6C027CFD7F9A9A510F197C467787068D5E0D9CDB2E8734F118966FB9D"
+  },
+  {
+    "path": "src\\game\\assets\\motion\\lead-jab.json",
+    "hash": "134D0743C3764541E242A28BD8D5CC2F433FF7BD4BA8A51228A3192BEEE67E3E"
+  },
+  {
+    "path": "src\\game\\assets\\motion\\rear-straight.json",
+    "hash": "9CCCC1E3D06C06E0E57EE99F1CE0C5471D3F62EF2295D75F37D09424E9F78528"
+  },
+  {
+    "path": "src\\game\\config\\p0Attacks.ts",
+    "hash": "993D879E58DD7CECC637DC733FAC590CE84C0DF46C81AA7EDD1AFE54BF5CB0B1"
+  },
+  {
+    "path": "src\\game\\config\\p0Sequence.ts",
+    "hash": "0566D84EEB073D0E8B61C840F978B9910E1F0481AA38EA02DEBE699A78D6F69D"
+  },
+  {
+    "path": "src\\game\\config\\p0Timing.ts",
+    "hash": "E25392C59268F0C46F3D3AB1FBD2A5B1DF439598AD199D7017B29464446091A6"
+  },
+  {
+    "path": "src\\game\\engine\\DefenseResolver.ts",
+    "hash": "AFB5FC52EA3356CEBBD594365092E4D70E8AA2E29C50E34EC5461CB663BC086E"
+  },
+  {
+    "path": "src\\game\\engine\\GameClock.ts",
+    "hash": "76E0A829610385CDCD4BE80047BEEEFD6B377FABBBEB5DF44D02B7FE2B9FFE5F"
+  },
+  {
+    "path": "src\\game\\engine\\GameStateMachine.ts",
+    "hash": "7A8F0BCD3C5643A0E0917293C0E5B5590161AAD2E15B809957C882CBEA28350A"
+  },
+  {
+    "path": "src\\game\\engine\\InputRouter.ts",
+    "hash": "82304F14238F55E8F424CFD7A03C5052BB159D87456EF29317D152E4227B4B91"
+  },
+  {
+    "path": "src\\game\\engine\\ScoreAccumulator.ts",
+    "hash": "30F2B6C3523DA72941DA9C23F0EF83EB9F98D2ABE8D0C5EC218DD461CD92D890"
+  },
+  {
+    "path": "src\\game\\model\\attack.ts",
+    "hash": "92AB33D05F9D8AF0EC02D1AC910CFDEEED1D8815AB387A3C23D3F8B3F8DC83CC"
+  },
+  {
+    "path": "src\\game\\model\\input.ts",
+    "hash": "3246BA4CE9F62A2562D00DB094AA7A5088CDF16C9CBCED9E0F0CA96BE218A4F3"
+  },
+  {
+    "path": "src\\game\\model\\types.ts",
+    "hash": "21414558DB7238229BEB7901C3CECFE17670AB78D4828A47260AE377BE199CFE"
+  },
+  {
+    "path": "src\\game\\telemetry\\P0Telemetry.ts",
+    "hash": "92D59BB714C8F669B59445BC754E2393C01346BC1492EBC6572246654F4B3F63"
+  },
+  {
+    "path": "src\\pages\\index.tsx",
+    "hash": "82D15C9018C4BA754E8C50F67682B623620266B85896DA28EB9AA6068864D2EF"
+  }
+]

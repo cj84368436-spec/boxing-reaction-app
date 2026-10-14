@@ -1,0 +1,29 @@
+{
+  "checkedDate": "2026-10-13",
+  "workspaceId": 36427,
+  "miniAppId": 78237,
+  "scope": "Read-only console placement settings; no impression or revenue claim",
+  "groups": [
+    {
+      "groupId": "ait.v2.live.0a25ead0c3b642ae",
+      "name": "재도전_리워드형",
+      "adFormat": "REWARDED",
+      "state": "ENABLED",
+      "abuseRestriction": "NONE"
+    },
+    {
+      "groupId": "ait.v2.live.0afa67d9d8934138",
+      "name": "단계전환_전면형",
+      "adFormat": "INTERSTITIAL",
+      "state": "ENABLED",
+      "abuseRestriction": "NONE"
+    },
+    {
+      "groupId": "ait.v2.live.1dae02e06eca49ee",
+      "name": "내기록하단_배너형",
+      "adFormat": "BANNER",
+      "state": "ENABLED",
+      "abuseRestriction": "NONE"
+    }
+  ]
+}

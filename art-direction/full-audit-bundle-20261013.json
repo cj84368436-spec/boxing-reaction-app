@@ -1,0 +1,278 @@
+{
+  "deploymentId": "01a1358f-235a-7f91-b637-6ee75ad4a7e7",
+  "bytes": 48754405,
+  "sha256": "5e3421f8334b3c4eae6631afcce05df35946c4e01d523dfc98f4dbfb2f5d3b22",
+  "scope": "actual AIT original assets, shared short-arena fit, intact cuffs and connected forearms, inactive-ad return pause, bounded progress read, audio isolation, guide and records; physical-device display/audio remains pending",
+  "bundles": [
+    {
+      "entry": "bundle.ios.0_84_0.js",
+      "bundleBytes": 17052971,
+      "images": [
+        {
+          "key": "jab",
+          "width": 1086,
+          "height": 1448,
+          "bytes": 1816926,
+          "sha256": "71f70fe0ceb43b55be9ea499ff41e592dc73c703bac4eee9e546e64347d918ef"
+        },
+        {
+          "key": "straight",
+          "width": 1086,
+          "height": 1448,
+          "bytes": 1812325,
+          "sha256": "bacec51861e26445c500e9d646ca9d2b43da178410a7439916c85438b52508e9"
+        },
+        {
+          "key": "hook",
+          "width": 1086,
+          "height": 1448,
+          "bytes": 1487166,
+          "sha256": "91880dbe31acbf76eb39dd2e67cd5d69f857ae86805a1a309b7573ee7bd87057"
+        },
+        {
+          "key": "uppercut",
+          "width": 1086,
+          "height": 1448,
+          "bytes": 1789014,
+          "sha256": "b6c4aa3323a4640019b3423205238cf51f432cd7a397dba08a1a7a2a1d8c7ce0"
+        },
+        {
+          "key": "coach",
+          "width": 1774,
+          "height": 887,
+          "bytes": 1404680,
+          "sha256": "1e26caf21f25506c3c95f8b22f735617bf8dad191fb48f4a609ae5ec2b9fbb26"
+        },
+        {
+          "key": "gloves",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 1076706,
+          "sha256": "98ae5fe280ecbb28db09bcee094b46c169dc792926800ae0bc29a1634a057e8a"
+        },
+        {
+          "key": "gym",
+          "width": 941,
+          "height": 1672,
+          "bytes": 1583714,
+          "sha256": "4cf6346708c6080a48682f6812361691baf6c224053eb4063db9639a06728f91"
+        }
+      ],
+      "recordsObserverContainer": true,
+      "sourceMappingsPreserved": true
+    },
+    {
+      "entry": "bundle.android.0_84_0.js",
+      "bundleBytes": 17052751,
+      "images": [
+        {
+          "key": "jab",
+          "width": 1086,
+          "height": 1448,
+          "bytes": 1816926,
+          "sha256": "71f70fe0ceb43b55be9ea499ff41e592dc73c703bac4eee9e546e64347d918ef"
+        },
+        {
+          "key": "straight",
+          "width": 1086,
+          "height": 1448,
+          "bytes": 1812325,
+          "sha256": "bacec51861e26445c500e9d646ca9d2b43da178410a7439916c85438b52508e9"
+        },
+        {
+          "key": "hook",
+          "width": 1086,
+          "height": 1448,
+          "bytes": 1487166,
+          "sha256": "91880dbe31acbf76eb39dd2e67cd5d69f857ae86805a1a309b7573ee7bd87057"
+        },
+        {
+          "key": "uppercut",
+          "width": 1086,
+          "height": 1448,
+          "bytes": 1789014,
+          "sha256": "b6c4aa3323a4640019b3423205238cf51f432cd7a397dba08a1a7a2a1d8c7ce0"
+        },
+        {
+          "key": "coach",
+          "width": 1774,
+          "height": 887,
+          "bytes": 1404680,
+          "sha256": "1e26caf21f25506c3c95f8b22f735617bf8dad191fb48f4a609ae5ec2b9fbb26"
+        },
+        {
+          "key": "gloves",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 1076706,
+          "sha256": "98ae5fe280ecbb28db09bcee094b46c169dc792926800ae0bc29a1634a057e8a"
+        },
+        {
+          "key": "gym",
+          "width": 941,
+          "height": 1672,
+          "bytes": 1583714,
+          "sha256": "4cf6346708c6080a48682f6812361691baf6c224053eb4063db9639a06728f91"
+        }
+      ],
+      "recordsObserverContainer": true,
+      "sourceMappingsPreserved": true
+    },
+    {
+      "entry": "bundle.ios.0_72_6.js",
+      "bundleBytes": 17091721,
+      "images": [
+        {
+          "key": "jab",
+          "width": 1086,
+          "height": 1448,
+          "bytes": 1816926,
+          "sha256": "71f70fe0ceb43b55be9ea499ff41e592dc73c703bac4eee9e546e64347d918ef"
+        },
+        {
+          "key": "straight",
+          "width": 1086,
+          "height": 1448,
+          "bytes": 1812325,
+          "sha256": "bacec51861e26445c500e9d646ca9d2b43da178410a7439916c85438b52508e9"
+        },
+        {
+          "key": "hook",
+          "width": 1086,
+          "height": 1448,
+          "bytes": 1487166,
+          "sha256": "91880dbe31acbf76eb39dd2e67cd5d69f857ae86805a1a309b7573ee7bd87057"
+        },
+        {
+          "key": "uppercut",
+          "width": 1086,
+          "height": 1448,
+          "bytes": 1789014,
+          "sha256": "b6c4aa3323a4640019b3423205238cf51f432cd7a397dba08a1a7a2a1d8c7ce0"
+        },
+        {
+          "key": "coach",
+          "width": 1774,
+          "height": 887,
+          "bytes": 1404680,
+          "sha256": "1e26caf21f25506c3c95f8b22f735617bf8dad191fb48f4a609ae5ec2b9fbb26"
+        },
+        {
+          "key": "gloves",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 1076706,
+          "sha256": "98ae5fe280ecbb28db09bcee094b46c169dc792926800ae0bc29a1634a057e8a"
+        },
+        {
+          "key": "gym",
+          "width": 941,
+          "height": 1672,
+          "bytes": 1583714,
+          "sha256": "4cf6346708c6080a48682f6812361691baf6c224053eb4063db9639a06728f91"
+        }
+      ],
+      "recordsObserverContainer": true,
+      "sourceMappingsPreserved": true
+    },
+    {
+      "entry": "bundle.android.0_72_6.js",
+      "bundleBytes": 17091501,
+      "images": [
+        {
+          "key": "jab",
+          "width": 1086,
+          "height": 1448,
+          "bytes": 1816926,
+          "sha256": "71f70fe0ceb43b55be9ea499ff41e592dc73c703bac4eee9e546e64347d918ef"
+        },
+        {
+          "key": "straight",
+          "width": 1086,
+          "height": 1448,
+          "bytes": 1812325,
+          "sha256": "bacec51861e26445c500e9d646ca9d2b43da178410a7439916c85438b52508e9"
+        },
+        {
+          "key": "hook",
+          "width": 1086,
+          "height": 1448,
+          "bytes": 1487166,
+          "sha256": "91880dbe31acbf76eb39dd2e67cd5d69f857ae86805a1a309b7573ee7bd87057"
+        },
+        {
+          "key": "uppercut",
+          "width": 1086,
+          "height": 1448,
+          "bytes": 1789014,
+          "sha256": "b6c4aa3323a4640019b3423205238cf51f432cd7a397dba08a1a7a2a1d8c7ce0"
+        },
+        {
+          "key": "coach",
+          "width": 1774,
+          "height": 887,
+          "bytes": 1404680,
+          "sha256": "1e26caf21f25506c3c95f8b22f735617bf8dad191fb48f4a609ae5ec2b9fbb26"
+        },
+        {
+          "key": "gloves",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 1076706,
+          "sha256": "98ae5fe280ecbb28db09bcee094b46c169dc792926800ae0bc29a1634a057e8a"
+        },
+        {
+          "key": "gym",
+          "width": 941,
+          "height": 1672,
+          "bytes": 1583714,
+          "sha256": "4cf6346708c6080a48682f6812361691baf6c224053eb4063db9639a06728f91"
+        }
+      ],
+      "recordsObserverContainer": true,
+      "sourceMappingsPreserved": true
+    }
+  ],
+  "preservedOriginalFiles": [
+    "src\\game\\assets\\motion\\lead-hook.json",
+    "src\\game\\assets\\motion\\lead-jab.json",
+    "src\\game\\assets\\motion\\rear-straight.json",
+    "src\\game\\config\\p0Attacks.ts",
+    "src\\game\\config\\p0Sequence.ts",
+    "src\\game\\config\\p0Timing.ts",
+    "src\\game\\engine\\DefenseResolver.ts",
+    "src\\game\\engine\\GameClock.ts",
+    "src\\game\\engine\\GameStateMachine.ts",
+    "src\\game\\engine\\InputRouter.ts",
+    "src\\game\\engine\\ScoreAccumulator.ts",
+    "src\\game\\model\\attack.ts",
+    "src\\game\\model\\input.ts",
+    "src\\game\\model\\types.ts",
+    "src\\game\\telemetry\\P0Telemetry.ts",
+    "tests\\defenseResolver.test.mjs",
+    "tests\\fixtures\\lead-jab-regression.json",
+    "tests\\inputRouter.contract.ts",
+    "tests\\inputRouter.test.mjs",
+    "tests\\mocapMotionContract.test.mjs",
+    "tests\\mocapPipelineHardening.test.mjs",
+    "tests\\runSchedule.test.mjs",
+    "tests\\scoring.test.mjs",
+    "tests\\sequence.test.mjs",
+    "tools\\mocap\\audit-motion-assets.mjs",
+    "tools\\mocap\\convert-cmu-amc.mjs",
+    "tools\\mocap\\motion-sources.json",
+    "tools\\mocap\\rebuild-motion-assets.mjs",
+    "tools\\mocap\\source-integrity.mjs",
+    "tools\\mocap\\validation-viewer\\runtime.mjs",
+    "tools\\mocap\\validation-viewer\\viewer-app.mjs",
+    "tools\\mocap\\validation-viewer\\viewer.html",
+    "src\\app\\assets\\art\\coach-skinny.png",
+    "src\\app\\assets\\art\\coach.png",
+    "src\\app\\assets\\art\\gloves.png",
+    "src\\app\\assets\\art\\gym.png",
+    "src\\app\\assets\\art\\hook.png",
+    "src\\app\\assets\\art\\jab.png",
+    "src\\app\\assets\\art\\straight.png",
+    "src\\app\\assets\\art\\uppercut.png"
+  ]
+}

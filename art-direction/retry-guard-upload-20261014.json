@@ -1,0 +1,37 @@
+{
+  "workspaceId": 36427,
+  "miniAppId": 78237,
+  "artifact": "boxing-talent-test.ait",
+  "bytes": 51171019,
+  "sha256": "78589d39e12716a0669f0e85146b5433d4eb4e56438007c5d9bcdaa2aaf7a5ab",
+  "uploadHttpStatus": 200,
+  "uploadComplete": true,
+  "authorization": "User requested upload in current conversation",
+  "deployment": {
+    "miniAppId": 78237,
+    "appName": "boxing-talent-test",
+    "deploymentId": "01a135df-3b9e-7b7d-985d-f98ca0988f93",
+    "versionName": "20261014-15",
+    "lastDeployedAt": null,
+    "memo": "목숨 소진 후 난이도·기록·홈 광고 우회 차단, 홈 설명 문구 삭제, 본인 시점 글러브 엄지 방향·손목·팔 연결 보완. 본인 테스트용",
+    "releaseNote": null,
+    "reviewStatus": "CREATED",
+    "reviewReason": null,
+    "failureReason": null,
+    "isTested": true,
+    "deployed": false,
+    "sdkVersion": "2.10.10",
+    "regTs": [
+      2026,
+      10,
+      14,
+      0,
+      31,
+      23
+    ],
+    "isSdk3Deployed": false
+  },
+  "privateLink": "intoss-private://boxing-talent-test?_deploymentId=01a135df-3b9e-7b7d-985d-f98ca0988f93",
+  "consoleTestUrl": "https://apps-in-toss.toss.im/workspace/36427/mini-app/78237/app-build?testDeploymentId=01a135df-3b9e-7b7d-985d-f98ca0988f93&testVersionName=20261014-15",
+  "scope": "Upload and own test push completed. No review submission or public release; physical-device quality pending."
+}

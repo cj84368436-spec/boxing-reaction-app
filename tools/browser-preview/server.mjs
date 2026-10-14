@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createCompetitionService, competitionHandler } from './competition-service.mjs';
 /**
  * tools/browser-preview/server.mjs
  *
@@ -26,6 +27,7 @@ const EXACT_ROUTES = new Map([
 ]);
 
 const DIRECTORY_ROUTES = [
+  {urlPrefix:'/src/app/assets/art/', directory:join(ROOT,'src','app','assets','art'),extensions:new Set(['.png'])},
   {
     urlPrefix: '/src/app/assets/sfx/',
     directory: join(ROOT, 'src', 'app', 'assets', 'sfx'),
@@ -96,10 +98,12 @@ function resolveAllowedPath(pathname) {
   return null;
 }
 
-export function createPreviewServer() {
+export function createPreviewServer(options = {}) {
+  const handleCompetition=competitionHandler(createCompetitionService({file:options.rankingFile??join(ROOT,'local-data','rankings.json'),...(options.now?{now:options.now}:{})}));
   return createServer(async (req, res) => {
     try {
       const url = new URL(req.url, `http://${LOOPBACK_HOST}`);
+      if(await handleCompetition(req,res,url))return;
       const pathname = decodeURIComponent(url.pathname);
       const filePath = resolveAllowedPath(pathname);
 
@@ -136,12 +140,12 @@ export async function startServer(preferredPort = 3000, maxAttempts = 10) {
 
       const url = `http://${LOOPBACK_HOST}:${port}`;
       console.log('\n======================================================');
-      console.log('🥊 Boxing Talent P0 — Dev Browser Preview');
+      console.log('🥊 Boxing Talent — Survival Dev Preview');
       console.log('------------------------------------------------------');
       console.log(`🌐 Preview URL: ${url}`);
       console.log('📱 Viewport:    390 × 844 (Mobile Frame)');
-      console.log('🥋 Motion:      Canonical Jab / Straight / Hook (19 Joints)');
-      console.log('🕹️ Controls:    LEFT / RIGHT / BACK / GUARD + Retry');
+      console.log('🥋 Motion:      Cartoon Survival · 30 punches · 5 lives');
+      console.log('🕹️ Controls:    4 buttons · Champion: DUCK / STEP_IN + Retry');
       console.log('⚠️ Notice:      DEV PREVIEW ONLY · Not Granite runtime');
       console.log('------------------------------------------------------');
       console.log('Press Ctrl+C to stop.');

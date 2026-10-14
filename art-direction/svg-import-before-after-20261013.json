@@ -1,0 +1,434 @@
+{
+  "before": {
+    "file": "C:\\Users\\cj799\\OneDrive\\바탕 화면\\미니앱\\복싱 재능 테스트\\boxing-app-starter-windows\\boxing-app-cartoon-rebuild\\release-backup\\boxing-talent-test-20261013-before-svg-interop.ait",
+    "deploymentId": "01a1343d-f2d4-78ba-8a4e-4f675ba5d12c",
+    "bytes": 6918607,
+    "sha256": "039a4a5f180886572f82df4c028ef7af9541d79b8be8b1a95853c6e7b32f30ab",
+    "scope": "compiled import and JSX type expressions; shared namespace modeled; native rendering excluded",
+    "bundles": [
+      {
+        "entry": "bundle.ios.0_84_0.js",
+        "results": [
+          {
+            "name": "BoxerRig",
+            "esModule": true,
+            "compiledType": "import_react_native_svg20.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "BoxerRig",
+            "esModule": false,
+            "compiledType": "import_react_native_svg20.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "CoachReaction",
+            "esModule": true,
+            "compiledType": "import_react_native_svg21.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "CoachReaction",
+            "esModule": false,
+            "compiledType": "import_react_native_svg21.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "SpriteImage",
+            "esModule": true,
+            "compiledType": "import_react_native_svg18.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "SpriteImage",
+            "esModule": false,
+            "compiledType": "import_react_native_svg18.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          }
+        ]
+      },
+      {
+        "entry": "bundle.android.0_84_0.js",
+        "results": [
+          {
+            "name": "BoxerRig",
+            "esModule": true,
+            "compiledType": "import_react_native_svg20.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "BoxerRig",
+            "esModule": false,
+            "compiledType": "import_react_native_svg20.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "CoachReaction",
+            "esModule": true,
+            "compiledType": "import_react_native_svg21.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "CoachReaction",
+            "esModule": false,
+            "compiledType": "import_react_native_svg21.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "SpriteImage",
+            "esModule": true,
+            "compiledType": "import_react_native_svg18.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "SpriteImage",
+            "esModule": false,
+            "compiledType": "import_react_native_svg18.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          }
+        ]
+      },
+      {
+        "entry": "bundle.ios.0_72_6.js",
+        "results": [
+          {
+            "name": "BoxerRig",
+            "esModule": true,
+            "compiledType": "import_react_native_svg20.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "BoxerRig",
+            "esModule": false,
+            "compiledType": "import_react_native_svg20.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "CoachReaction",
+            "esModule": true,
+            "compiledType": "import_react_native_svg21.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "CoachReaction",
+            "esModule": false,
+            "compiledType": "import_react_native_svg21.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "SpriteImage",
+            "esModule": true,
+            "compiledType": "import_react_native_svg18.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "SpriteImage",
+            "esModule": false,
+            "compiledType": "import_react_native_svg18.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          }
+        ]
+      },
+      {
+        "entry": "bundle.android.0_72_6.js",
+        "results": [
+          {
+            "name": "BoxerRig",
+            "esModule": true,
+            "compiledType": "import_react_native_svg20.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "BoxerRig",
+            "esModule": false,
+            "compiledType": "import_react_native_svg20.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "CoachReaction",
+            "esModule": true,
+            "compiledType": "import_react_native_svg21.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "CoachReaction",
+            "esModule": false,
+            "compiledType": "import_react_native_svg21.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "SpriteImage",
+            "esModule": true,
+            "compiledType": "import_react_native_svg18.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          },
+          {
+            "name": "SpriteImage",
+            "esModule": false,
+            "compiledType": "import_react_native_svg18.default",
+            "componentType": "object",
+            "isModuleNamespace": true
+          }
+        ]
+      }
+    ]
+  },
+  "after": {
+    "file": "C:\\Users\\cj799\\OneDrive\\바탕 화면\\미니앱\\복싱 재능 테스트\\boxing-app-starter-windows\\boxing-app-cartoon-rebuild\\boxing-talent-test.ait",
+    "deploymentId": "01a1347e-cc43-7b0d-a7d6-256c0188f115",
+    "bytes": 6918593,
+    "sha256": "856b7aec768da0940ebb04051f84f5e0340624467afc7ed99eab5b7f0928c953",
+    "scope": "compiled import and JSX type expressions; shared namespace modeled; native rendering excluded",
+    "bundles": [
+      {
+        "entry": "bundle.ios.0_84_0.js",
+        "results": [
+          {
+            "name": "BoxerRig",
+            "esModule": true,
+            "compiledType": "import_react_native_svg20.Svg",
+            "componentType": "function",
+            "isModuleNamespace": false
+          },
+          {
+            "name": "BoxerRig",
+            "esModule": false,
+            "compiledType": "import_react_native_svg20.Svg",
+            "componentType": "function",
+            "isModuleNamespace": false
+          },
+          {
+            "name": "CoachReaction",
+            "esModule": true,
+            "compiledType": "import_react_native_svg21.Svg",
+            "componentType": "function",
+            "isModuleNamespace": false
+          },
+          {
+            "name": "CoachReaction",
+            "esModule": false,
+            "compiledType": "import_react_native_svg21.Svg",
+            "componentType": "function",
+            "isModuleNamespace": false
+          },
+          {
+            "name": "SpriteImage",
+            "esModule": true,
+            "compiledType": "import_react_native_svg18.Svg",
+            "componentType": "function",
+            "isModuleNamespace": false
+          },
+          {
+            "name": "SpriteImage",
+            "esModule": false,
+            "compiledType": "import_react_native_svg18.Svg",
+            "componentType": "function",
+            "isModuleNamespace": false
+          }
+        ],
+        "sourceMapsMatchFinalComponents": true
+      },
+      {
+        "entry": "bundle.android.0_84_0.js",
+        "results": [
+          {
+            "name": "BoxerRig",
+            "esModule": true,
+            "compiledType": "import_react_native_svg20.Svg",
+            "componentType": "function",
+            "isModuleNamespace": false
+          },
+          {
+            "name": "BoxerRig",
+            "esModule": false,
+            "compiledType": "import_react_native_svg20.Svg",
+            "componentType": "function",
+            "isModuleNamespace": false
+          },
+          {
+            "name": "CoachReaction",
+            "esModule": true,
+            "compiledType": "import_react_native_svg21.Svg",
+            "componentType": "function",
+            "isModuleNamespace": false
+          },
+          {
+            "name": "CoachReaction",
+            "esModule": false,
+            "compiledType": "import_react_native_svg21.Svg",
+            "componentType": "function",
+            "isModuleNamespace": false
+          },
+          {
+            "name": "SpriteImage",
+            "esModule": true,
+            "compiledType": "import_react_native_svg18.Svg",
+            "componentType": "function",
+            "isModuleNamespace": false
+          },
+          {
+            "name": "SpriteImage",
+            "esModule": false,
+            "compiledType": "import_react_native_svg18.Svg",
+            "componentType": "function",
+            "isModuleNamespace": false
+          }
+        ],
+        "sourceMapsMatchFinalComponents": true
+      },
+      {
+        "entry": "bundle.ios.0_72_6.js",
+        "results": [
+          {
+            "name": "BoxerRig",
+            "esModule": true,
+            "compiledType": "import_react_native_svg20.Svg",
+            "componentType": "function",
+            "isModuleNamespace": false
+          },
+          {
+            "name": "BoxerRig",
+            "esModule": false,
+            "compiledType": "import_react_native_svg20.Svg",
+            "componentType": "function",
+            "isModuleNamespace": false
+          },
+          {
+            "name": "CoachReaction",
+            "esModule": true,
+            "compiledType": "import_react_native_svg21.Svg",
+            "componentType": "function",
+            "isModuleNamespace": false
+          },
+          {
+            "name": "CoachReaction",
+            "esModule": false,
+            "compiledType": "import_react_native_svg21.Svg",
+            "componentType": "function",
+            "isModuleNamespace": false
+          },
+          {
+            "name": "SpriteImage",
+            "esModule": true,
+            "compiledType": "import_react_native_svg18.Svg",
+            "componentType": "function",
+            "isModuleNamespace": false
+          },
+          {
+            "name": "SpriteImage",
+            "esModule": false,
+            "compiledType": "import_react_native_svg18.Svg",
+            "componentType": "function",
+            "isModuleNamespace": false
+          }
+        ],
+        "sourceMapsMatchFinalComponents": true
+      },
+      {
+        "entry": "bundle.android.0_72_6.js",
+        "results": [
+          {
+            "name": "BoxerRig",
+            "esModule": true,
+            "compiledType": "import_react_native_svg20.Svg",
+            "componentType": "function",
+            "isModuleNamespace": false
+          },
+          {
+            "name": "BoxerRig",
+            "esModule": false,
+            "compiledType": "import_react_native_svg20.Svg",
+            "componentType": "function",
+            "isModuleNamespace": false
+          },
+          {
+            "name": "CoachReaction",
+            "esModule": true,
+            "compiledType": "import_react_native_svg21.Svg",
+            "componentType": "function",
+            "isModuleNamespace": false
+          },
+          {
+            "name": "CoachReaction",
+            "esModule": false,
+            "compiledType": "import_react_native_svg21.Svg",
+            "componentType": "function",
+            "isModuleNamespace": false
+          },
+          {
+            "name": "SpriteImage",
+            "esModule": true,
+            "compiledType": "import_react_native_svg18.Svg",
+            "componentType": "function",
+            "isModuleNamespace": false
+          },
+          {
+            "name": "SpriteImage",
+            "esModule": false,
+            "compiledType": "import_react_native_svg18.Svg",
+            "componentType": "function",
+            "isModuleNamespace": false
+          }
+        ],
+        "sourceMapsMatchFinalComponents": true
+      }
+    ]
+  },
+  "protectedFilesIdenticalToDiagnosticBaseline": [
+    "src/game/assets/motion/lead-hook.json",
+    "src/game/assets/motion/lead-jab.json",
+    "src/game/assets/motion/rear-straight.json",
+    "src/game/config/p0Attacks.ts",
+    "src/game/config/p0Sequence.ts",
+    "src/game/config/p0Timing.ts",
+    "src/game/engine/DefenseResolver.ts",
+    "src/game/engine/GameClock.ts",
+    "src/game/engine/GameStateMachine.ts",
+    "src/game/engine/InputRouter.ts",
+    "src/game/engine/ScoreAccumulator.ts",
+    "src/game/model/attack.ts",
+    "src/game/model/input.ts",
+    "src/game/model/types.ts",
+    "src/game/telemetry/P0Telemetry.ts",
+    "tests/defenseResolver.test.mjs",
+    "tests/fixtures/lead-jab-regression.json",
+    "tests/inputRouter.contract.ts",
+    "tests/inputRouter.test.mjs",
+    "tests/mocapMotionContract.test.mjs",
+    "tests/mocapPipelineHardening.test.mjs",
+    "tests/runSchedule.test.mjs",
+    "tests/scoring.test.mjs",
+    "tests/sequence.test.mjs",
+    "tools/mocap/audit-motion-assets.mjs",
+    "tools/mocap/convert-cmu-amc.mjs",
+    "tools/mocap/motion-sources.json",
+    "tools/mocap/rebuild-motion-assets.mjs",
+    "tools/mocap/source-integrity.mjs",
+    "tools/mocap/validation-viewer/runtime.mjs",
+    "tools/mocap/validation-viewer/viewer-app.mjs",
+    "tools/mocap/validation-viewer/viewer.html"
+  ]
+}

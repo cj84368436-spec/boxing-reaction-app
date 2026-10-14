@@ -1,59 +1,44 @@
-import React, { useMemo } from 'react';
+import React, {useState} from 'react';
 import { StyleSheet, View } from 'react-native';
-import Svg, { G, Line, Polyline } from 'react-native-svg';
-import { buildBoxerArtwork } from '../motion/boxingArtwork';
-import { VectorArtwork } from './VectorArtwork';
-import { sampleLeadJabReadyPose } from '../motion/leadJabReadyPose';
-import { COMBAT_VIEW, projectCombatPose, type getFirstPersonFrame } from '../motion/firstPersonPresentation';
-import { getP0MotionAsset } from '../motion/p0MotionRegistry';
-import { PlayerDefenseFeedback } from './PlayerDefenseFeedback';
+import { Svg, G, Line } from 'react-native-svg';
+import { SpriteImage } from './SpriteImage';
+import { ART_ATLAS } from '../motion/artAtlas';
+import { ART_SOURCES } from '../assets/artSources';
+import { selectSpriteFrame, selectSpriteSheet } from '../motion/cartoonSprites';
+import { COMBAT_VIEW, type getFirstPersonFrame } from '../motion/firstPersonPresentation';
 import type { SampledPose } from '../motion/types';
+import { PlayerDefenseFeedback } from './PlayerDefenseFeedback';
 
-interface BoxerRigProps {
-  readonly pose?: SampledPose;
-  readonly frame?: ReturnType<typeof getFirstPersonFrame>;
+const sheets=ART_SOURCES;
+export function BoxerRig({pose,frame}:{readonly pose?:SampledPose;readonly frame?:ReturnType<typeof getFirstPersonFrame>}) {
+  const [viewport,setViewport]=useState<{width:number;height:number}>({width:COMBAT_VIEW.width,height:COMBAT_VIEW.height});
+  const viewportHeight=viewport.height;
+  const viewBox=`${(COMBAT_VIEW.width-viewport.width)/2} 0 ${viewport.width} ${viewportHeight}`;
+  const attackId=frame?.attackId ?? pose?.attackId ?? 'LEAD_JAB_HEAD';
+  const index=selectSpriteFrame(attackId,frame?.elapsedMs ?? pose?.timeMs ?? 0);
+  // One shared ready drawing prevents identity/scale jumps during quiet intervals.
+  const sheet=selectSpriteSheet(attackId,index);
+  const cel=index===5 || (sheet==='straight' && index===1) ? 0 : index;
+  const lean=sheet==='straight' && index===1 ? -3 : 0;
+  return <View accessible accessibilityRole="image" accessibilityLabel="상대 복서" pointerEvents="none" style={styles.viewport}
+    onLayout={({nativeEvent:{layout:{width,height}}})=>{
+      // Fit both fighters together on short arenas, keeping all original
+      // world/camera coordinates and the same scale for both SVG layers.
+      if(width>0 && height>0){
+        const heightInScene=Math.max(COMBAT_VIEW.height,COMBAT_VIEW.width*height/width);
+        setViewport({width:heightInScene*width/height,height:heightInScene});
+      }
+    }}>
+    <Svg testID="boxer-rig-svg" width="100%" height="100%" viewBox={viewBox} preserveAspectRatio="xMidYMin meet">
+      <G testID="opponent-world" transform={`translate(${frame?.cameraX ?? 0} ${frame?.cameraY ?? 0}) translate(140 165) scale(${frame?.cameraScale ?? 1}) translate(-140 -165)`}>
+        <G transform={`rotate(${lean} 140 300)`}><SpriteImage source={sheets[sheet]} {...ART_ATLAS[sheet]} index={cel} x={10} y={8} displayWidth={260} displayHeight={520}/></G>
+      </G>
+      {frame?.contact && (frame.hit || frame.guard>.5) ? <G>{Array.from({length:8},(_,i)=>{const a=i*Math.PI/4;return <Line key={i} x1={140+Math.cos(a)*42} y1={165+Math.sin(a)*42} x2={140+Math.cos(a)*61} y2={165+Math.sin(a)*61} stroke={frame.hit?'#FFE9CB':'#91C5FF'} strokeWidth={4}/>;})}</G>:null}
+    </Svg>
+    <Svg testID="player-gloves-svg" width="100%" height="100%" style={StyleSheet.absoluteFillObject}
+      viewBox={viewBox} preserveAspectRatio="xMidYMin meet">
+      <PlayerDefenseFeedback guard={frame?.guard ?? 0} viewportHeight={viewportHeight}/>
+    </Svg>
+  </View>;
 }
-
-export function BoxerRig({ pose, frame }: BoxerRigProps) {
-  const artwork = useMemo(() => {
-    if (frame) return buildBoxerArtwork(frame.pose, frame.cueActive ? frame.hand : undefined);
-    const sampled = pose ?? sampleLeadJabReadyPose();
-    return buildBoxerArtwork(projectCombatPose(getP0MotionAsset(sampled.attackId), sampled.timeMs));
-  }, [pose, frame]);
-
-  return (
-    <View
-      accessibilityLabel="상대 복서"
-      accessibilityRole="image"
-      accessible
-      pointerEvents="none"
-      style={styles.viewport}
-    >
-      <Svg
-        testID="boxer-rig-svg"
-        width="100%"
-        height="100%"
-        viewBox={`0 0 ${COMBAT_VIEW.width} ${COMBAT_VIEW.height}`}
-        preserveAspectRatio="xMidYMid meet"
-      >
-        <G testID="opponent-world" transform={`translate(${frame?.cameraX ?? 0} ${frame?.cameraY ?? 0}) translate(140 165) scale(${frame?.cameraScale ?? 1}) translate(-140 -165)`}>
-        {frame?.cueActive ? <Polyline points={[...frame.trail, frame.pose[frame.hand]].map(p => `${p.x},${p.y}`).join(' ')} fill="none" stroke="#F3C969" strokeWidth={18} strokeLinecap="round" opacity={0.22} /> : null}
-        <VectorArtwork nodes={artwork} />
-        </G>
-        {frame?.contact && (frame.hit || frame.guard > .5) ? <G>{Array.from({length:8}, (_, i) => {
-          const a = i * Math.PI / 4, x = 140 + frame.cameraX, y = 165 + frame.cameraY;
-          return <Line key={i} x1={x+Math.cos(a)*43} y1={y+Math.sin(a)*43} x2={x+Math.cos(a)*54} y2={y+Math.sin(a)*54} stroke={frame.hit ? '#FF7A80' : '#F3C969'} strokeWidth={3} strokeLinecap="round" />;
-        })}</G> : null}
-        <PlayerDefenseFeedback guard={frame?.guard ?? 0} />
-      </Svg>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  viewport: {
-    width: '100%',
-    height: '100%',
-    position: 'relative',
-  },
-});
+const styles=StyleSheet.create({viewport:{width:'100%',height:'100%'}});

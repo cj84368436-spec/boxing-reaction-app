@@ -1,0 +1,27 @@
+{
+  "File": "src/app/assets/art/gloves-high-guard.png",
+  "Width": 1024,
+  "Height": 1536,
+  "CornerAlpha": 0,
+  "GutterAlpha": 0,
+  "SHA256": "4cb13d14f9c92a6f49c28eec90d8a701e5e102170b420ec556c52e01723fe02c",
+  "CellAssignment": {
+    "0": "own left hand, thumb silhouette at left outer edge",
+    "1": "own right hand, thumb silhouette at right outer edge"
+  },
+  "GloveCuffAlphaBounds": [
+    [
+      14,
+      39,
+      498,
+      820
+    ],
+    [
+      9,
+      39,
+      498,
+      820
+    ]
+  ],
+  "Scope": "Alpha and bounds audited; hand direction and wrist continuity reviewed in current native SVG desktop render; physical device pending"
+}

@@ -1,3 +1,9 @@
+import { LEVELS } from '/.preview-dist/app/session/survivalRules.js';
+import { emptyProgress, parseProgress, recordRound, summarizeRound, recordText, compareRecords, earnsPromotion, isHighScore } from '/.preview-dist/app/session/progression.js';
+import { startChallenge, submitChallenge, standingText, readCompetition, overviewText } from '/.preview-dist/app/session/competitionClient.js';
+import { CoachDialogue } from '/.preview-dist/app/motion/coachDialogue.js';
+import { ART_ATLAS } from '/.preview-dist/app/motion/artAtlas.js';
+import { selectSpriteFrame, selectSpriteSheet } from '/.preview-dist/app/motion/cartoonSprites.js';
 import { candidateFailureReason } from '/.preview-dist/app/session/candidateRules.js';
 import { RoundClock, ROUND_SPEEDS } from '/.preview-dist/app/session/RoundClock.js';
 import { PreviewTenPunchSession } from './preview-session.mjs';
@@ -8,12 +14,40 @@ import { getCoachMoment, getRematchReview } from '/.preview-dist/app/motion/coac
 const byId = id => document.getElementById(id);
 const svg = byId('boxer-svg'), stage = byId('stage'), status = byId('status');
 const buttons = [...document.querySelectorAll('.defense-btn')];
-const bars = [...document.querySelectorAll('.progress-bar')];
+const progressRow=document.querySelector('.progress');
+progressRow.replaceChildren(...Array.from({length:30},()=>{const bar=document.createElement('div');bar.className='progress-bar';return bar;}));
+const bars=[...progressRow.children];
+const STORAGE_KEY='boxing-survival-v1';
+let progress=emptyProgress(), storageNote='',level=1, challenge=null, inputs=[], connecting=false, ready=false, requestVersion=0;
+try{progress=parseProgress(localStorage.getItem(STORAGE_KEY));}catch{storageNote='기록 저장을 사용할 수 없습니다.';}
+function renderLevels(){
+ byId('level-options').replaceChildren(...[1,2,3].map(n=>{const b=document.createElement('button');b.type='button';b.textContent=(n>progress.unlocked?'🔒 ':'')+LEVELS[n].name;b.disabled=n>progress.unlocked;b.className=n===level?'selected':'';b.onclick=()=>{level=n;renderLevels();};return b;}));
+ byId('begin-button').textContent=LEVELS[level].name+' 도전 시작';byId('personal-best').textContent=recordText(progress.best[level])+' · 연속 최고 '+(progress.bestStreak[level]??0);
+ byId('storage-note').textContent=storageNote||'30회를 버티면 다음 단계 해금';
+}
+function closeRecords(){requestVersion++;byId('records-card').hidden=true;byId('intro-card').hidden=false;focusButton('daily-button');}
+async function openRecords(){
+ if(!ready||connecting)return;
+ const version=++requestVersion;
+ byId('records-list').replaceChildren(...[1,2,3].map(n=>{const card=document.createElement('div');card.className='record-card';card.textContent=LEVELS[n].name+' · '+recordText(progress.best[n])+' · 연속 최고 '+(progress.bestStreak[n]??0);return card;}));
+ byId('intro-card').hidden=true;byId('records-card').hidden=false;byId('records-standing').textContent='오늘의 기록 불러오는 중…';focusButton('records-close-button');
+ try{const v=await readCompetition();if(version===requestVersion)byId('records-standing').textContent=overviewText(v);}catch{if(version===requestVersion)byId('records-standing').textContent='온라인 기록을 불러오지 못했습니다. 개인 기록은 위에서 볼 수 있습니다.';}
+}
+async function beginDaily(){
+ if(!ready||connecting)return;
+ connecting=true;const version=++requestVersion;
+ byId('daily-start-button').disabled=true;byId('begin-button').disabled=true;
+ try{const c=await startChallenge();if(version===requestVersion)start(c.seed,LEVELS[2].rate,c);}
+ catch{if(version===requestVersion){const message='비교 서버 연결 실패 · 다시 시도해 주세요.';byId('records-standing').textContent=message;byId('rank-note').textContent=message;}}
+ finally{connecting=false;byId('daily-start-button').disabled=false;byId('begin-button').disabled=false;}
+}
+
 const assets = {}, acceptedAt = new Map();
+const dialogue = new CoachDialogue();
 const clock = new RoundClock({ nowMs: () => performance.now() });
 let session, playedResults = 0, showingResults = false, started = false, paused = false;
 let soundEnabled = true, frameId = null;
-const sounds = Object.fromEntries(['evade', 'guard', 'hit', 'hitJab', 'hitStraight', 'hitHook', 'recognition'].map(kind => {
+const sounds = Object.fromEntries(['evade', 'guard', 'hit', 'hitJab', 'hitStraight', 'hitHook', 'recognition', 'knockout'].map(kind => {
   const audio = new Audio(`/src/app/assets/sfx/${kind}.wav`);
   audio.preload = 'auto'; audio.volume = .7;
   return [kind, audio];
@@ -40,10 +74,19 @@ function artworkElement(node) {
   if (node.children) shape.append(...node.children.map(artworkElement));
   return shape;
 }
+
+function sprite(sheet,index,x,y,width,height) {
+  const a=ART_ATLAS[sheet], cw=a.width/a.columns, ch=a.height/a.rows;
+  const crop=element('svg',{x,y,width,height,viewBox:`${(index%a.columns)*cw} ${Math.floor(index/a.columns)*ch} ${cw} ${ch}`,preserveAspectRatio:'xMidYMid meet',overflow:'hidden'});
+  crop.append(element('image',{href:'/src/app/assets/art/'+(sheet==='coach'?'coach-skinny':sheet)+'.png',width:a.width,height:a.height}));
+  return crop;
+}
+
 function renderCoach(id, reaction) {
   const card = byId(id); card.className = 'coach-card';
   const portrait = element('svg', {viewBox:'0 0 136 160', role:'img', 'aria-label':'얄미운 관장'});
-  portrait.append(...buildCoachArtwork(reaction.mood).map(artworkElement));
+  if(id==='coach-ringside') {portrait.setAttribute('viewBox','0 0 136 105');portrait.setAttribute('preserveAspectRatio','xMidYMin slice');}
+  portrait.append(sprite('coach',{smirk:0,interested:1,surprised:2}[reaction.mood],0,0,136,160));
   const copy = document.createElement('div'); copy.className='coach-copy';
   for (const [className, text] of [['coach-label','동네 체육관 · 관장'],['coach-line',reaction.line],['coach-note',reaction.note]]) {
     const row = document.createElement('div'); row.className=className; row.textContent=text; copy.append(row);
@@ -53,15 +96,15 @@ function renderCoach(id, reaction) {
 function draw(frame) {
   const world = element('g', { 'data-testid': 'opponent-world', transform:
     `translate(${frame.cameraX} ${frame.cameraY}) translate(140 165) scale(${frame.cameraScale}) translate(-140 -165)` });
-  if (frame.cueActive) {
-    const point = frame.pose[frame.hand];
-    world.append(element('polyline', { points: [...frame.trail, point].map(p => `${p.x},${p.y}`).join(' '),
-      fill: 'none', stroke: '#f3c969', 'stroke-width': 18, 'stroke-linecap': 'round', opacity: .22 }));
-  }
-  world.append(...buildBoxerArtwork(frame.pose, frame.cueActive ? frame.hand : undefined).map(artworkElement));
-  const gloves = element('g', { 'data-testid': 'player-gloves', opacity: .85 + frame.guard * .15 });
-  gloves.append(...buildPlayerGloves(frame.guard).map(artworkElement));
-  const moment = getCoachMoment(session.snapshot());
+  const cel=selectSpriteFrame(frame.attackId,frame.elapsedMs);
+  const sheet=selectSpriteSheet(frame.attackId,cel);
+  const drawnCel=cel===5 || (sheet==='straight' && cel===1)?0:cel;
+  const fighter=element('g',{transform:sheet==='straight' && cel===1?'rotate(-3 140 300)':'rotate(0)'});
+  fighter.append(sprite(sheet,drawnCel,10,8,260,520));world.append(fighter);
+  const gloves=element('g',{'data-testid':'player-gloves'});
+  const guard=Math.max(0,Math.min(1,frame.guard)), gy=270-guard*175;
+  gloves.append(sprite('gloves',0,-30+guard*92,gy,128,195),sprite('gloves',1,182-guard*92,gy,128,195));
+  const moment = getCoachMoment(session.snapshot(), dialogue);
   const liveCoach = byId('coach-ringside');
   liveCoach.hidden = !started || showingResults;
   const reaction = { mood: !paused && moment ? moment.mood : session.snapshot().results.filter(r=>r.outcome==='PERFECT').length >= 6 ? 'surprised' : session.snapshot().results.filter(r=>r.outcome==='PERFECT').length >= 3 ? 'interested' : 'smirk', line: !paused && moment ? moment.line : paused ? '쉬고 오게. 기다리지.' : '', note: '' };
@@ -81,7 +124,7 @@ function draw(frame) {
   svg.replaceChildren(world, contact, gloves);
   stage.classList.toggle('hit', frame.hit);
   stage.classList.toggle('evaded', frame.contact && frame.outcome === 'PERFECT');
-  status.textContent = !started ? '공격마다 버튼 한 번' : paused ? '일시 정지' : showingResults ? '라운드 완료' :
+  status.textContent = !started ? '공격마다 버튼 한 번' : paused ? '일시 정지' : showingResults ? session.snapshot().knockedOut ? '다운 · 경기 종료' : '라운드 클리어' :
     notice && clock.nowMs() < notice.until ? notice.text : frame.feedback || '주먹을 보세요';
   const snapshot = session.snapshot();
   const until = snapshot.scheduledAttacks[0].attackStartScheduledAtMs - snapshot.nowMs;
@@ -101,37 +144,53 @@ function playSfx(result) {
 
 function handleInput(input) {
   if (!session || !started || paused) return;
+  if (level !== 3 && (input === 'DUCK' || input === 'STEP_IN')) return;
   if (session.tick().sessionCompleted) return;
+  if(challenge)inputs.push({atMs:clock.nowMs(),input});
   const receipt = session.handleInput(input);
   if (receipt.status === 'VALID' && !acceptedAt.has(receipt.targetAttackInstanceId)) {
     acceptedAt.set(receipt.targetAttackInstanceId, receipt.atMs);
   }
-  if (receipt.status === 'VALID') notice = {text: ({LEFT:'왼쪽 회피',RIGHT:'오른쪽 회피',BACK:'거리 빼기',GUARD:'가드'})[receipt.input] + ' · 동작 중', until:clock.nowMs()+160};
+  if (receipt.status === 'VALID') notice = {text: ({LEFT:'왼쪽 회피',RIGHT:'오른쪽 회피',BACK:'거리 빼기',GUARD:'가드',DUCK:'숙이기',STEP_IN:'앞으로 파고들기'})[receipt.input] + ' · 동작 중', until:clock.nowMs()+160};
   if (receipt.status !== 'VALID') notice = {text: receipt.status === 'EARLY' ? '너무 빠름 · 복귀 뒤 다시 입력' : receipt.status === 'LATE' ? '조금 더 일찍 눌러보세요' : '버튼 하나만 눌러주세요', until:clock.nowMs()+200};
   return receipt;
 }
 
 function showResults(snapshot) {
   const totals = { PERFECT: 0, SAFE: 0, HIT: 0 };
-  const labels = { LEAD_JAB_HEAD: '잽', REAR_STRAIGHT_HEAD: '스트레이트', LEAD_HOOK_HEAD: '훅' };
+  const labels = { LEAD_JAB_HEAD: '잽', REAR_STRAIGHT_HEAD: '스트레이트', LEAD_HOOK_HEAD: '훅', LEAD_UPPERCUT_HEAD: '어퍼컷' };
   for (const result of snapshot.results) totals[result.outcome]++;
   for (const outcome of Object.keys(totals)) byId(`summary-${outcome.toLowerCase()}`).textContent = `${({PERFECT:'완벽 회피',SAFE:'안전 방어',HIT:'피격'})[outcome]} ${totals[outcome]}`;
-  byId('result-title').textContent = `${totals.PERFECT + totals.SAFE} / 10 방어 성공`;
-  const rematch = getRematchReview(snapshot.results, speed, true);
-  if (totals.HIT === 0 && totals.PERFECT >= 8 && soundEnabled) {sounds.recognition.currentTime=0; void sounds.recognition.play().catch(()=>{});}
+  const record=summarizeRound(snapshot,level,speed),old=progress.best[level];
+  progress=recordRound(progress,record);
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(progress));}catch{storageNote='기록 저장 실패 · 이번 실행에서는 유지됩니다.';}
+  byId('result-title').textContent=snapshot.knockedOut?'다운 · '+record.survived+' / 30 생존':'클리어 · 목숨 '+record.lives+'개';
+  byId('record-title').textContent=!old||compareRecords(record,old)<0?'개인 최고 기록!':recordText(old);
+  byId('record-detail').textContent='완벽 회피 '+record.perfect+'/30 · 최장 연속 '+record.streak+'회';
+  if(isHighScore(record))byId('record-detail').textContent+=' · 관장의 인정 달성!';
+  byId('promotion-note').textContent=earnsPromotion(record)?level<3?LEVELS[level+1].name+' 단계 해금!':'최고 단계 클리어!':'다음 목표: 목숨을 남기고 30회 버티기';
+  byId('promote-button').hidden=level===3||progress.unlocked<=level||!!challenge;
+  byId('promote-button').textContent=level<3?'다음 난이도 도전 · '+LEVELS[level+1].name:'';
+  byId('rank-note').textContent=challenge?'기록 검증 중…':storageNote||'난이도별 최고 기록은 이 브라우저에 저장됩니다.';
+  if(challenge){const submitted=challenge;submitChallenge(submitted,inputs).then(r=>{if(challenge===submitted)byId('rank-note').textContent=standingText(r);}).catch(()=>{if(challenge===submitted)byId('rank-note').textContent='비교 기록 제출 실패 · 개인 기록은 유지됩니다.';});}
+
+  const rematch = getRematchReview(snapshot.results, speed, true, {dialogue, event:snapshot.runId, knockedOut:snapshot.knockedOut === true,totalPunches:30});
+  if (snapshot.knockedOut && soundEnabled && !paused && !document.hidden) {stopAudio(); sounds.knockout.currentTime=0; void sounds.knockout.play().catch(()=>{});}
+  if (totals.HIT === 0 && totals.PERFECT >= 24 && soundEnabled) {sounds.recognition.currentTime=0; void sounds.recognition.play().catch(()=>{});}
   renderCoach('coach-result', rematch.reaction);
   byId('rematch-title').textContent = rematch.focusTitle;
   byId('rematch-body').textContent = rematch.focusBody;
-  byId('retry-label').textContent = rematch.retryLabel;
-  byId('retry-note').textContent = rematch.retryNote;
+  byId('retry-label').textContent = '다시 도전';
+  byId('new-pattern-button').hidden=!!challenge;
+  byId('retry-note').textContent = challenge ? '오늘의 같은 코스에 다시 도전합니다.' : rematch.retryNote;
   byId('result-list').replaceChildren(...snapshot.results.map(result => {
     const row = document.createElement('div'); row.className = 'result-row';
     const attack = document.createElement('div'); attack.className = 'result-attack';
     attack.textContent = `#${result.attackIndex + 1} ${labels[result.attackId]}`;
     const detail = document.createElement('div'); detail.className = 'result-detail';
-    const input = {LEFT:'왼쪽 회피',RIGHT:'오른쪽 회피',BACK:'뒤로 피하기',GUARD:'가드'}[result.telemetry.inputButton] ?? '입력 없음';
+    const input = {LEFT:'왼쪽 회피',RIGHT:'오른쪽 회피',BACK:'뒤로 피하기',GUARD:'가드',DUCK:'숙이기',STEP_IN:'앞으로 파고들기'}[result.telemetry.inputButton] ?? '입력 없음';
     const reason = result.outcome !== 'HIT' ? result.outcome === 'PERFECT' ? '완벽하게 피함' : '안전하게 방어' :
-      result.telemetry.inputStatus === 'NO_INPUT' ? '누르지 않아 맞음' : result.telemetry.inputStatus === 'VALID' ? candidateFailureReason(result.attackId,result.telemetry.inputButton) :
+      result.telemetry.inputStatus === 'NO_INPUT' ? '누르지 않아 맞음' : result.telemetry.inputStatus === 'VALID' ? ['DUCK','STEP_IN'].includes(result.telemetry.inputButton) ? '공격을 피하지 못함' : candidateFailureReason(result.attackId,result.telemetry.inputButton) :
       {EARLY:'너무 일찍 누름',LATE:'늦게 누름',MULTI_INPUT:'버튼을 동시에 누름'}[result.telemetry.inputStatus] ?? '방어 실패';
     detail.textContent = `${input} · ${reason}`;
     if (debug) detail.textContent += ` · ${result.telemetry.inputStatus} · ${result.telemetry.reactionMs == null ? '—' : Math.round(result.telemetry.reactionMs / speed)} ms`;
@@ -144,24 +203,28 @@ function showResults(snapshot) {
   document.querySelector('.controls').hidden = true;
   byId('round-hint').textContent = '';
   byId('mode-label').hidden = true;
-  status.textContent = '라운드 완료';
+  status.textContent = snapshot.knockedOut ? '다운 · 경기 종료' : '라운드 클리어';
   focusButton('retry-button');
 }
 
-function start(seed, selectedSpeed = speed) {
-  if (started && !session.snapshot().sessionCompleted) return;
+function start(seed, selectedSpeed = LEVELS[level].rate, daily = null) {
+  if (!ready || (connecting && !daily) || (started && !session.snapshot().sessionCompleted)) return;
+  requestVersion++;byId('records-card').hidden=true;
+  if(!daily && level>progress.unlocked)return;
   const returning = started;
+  challenge=daily;inputs=[];if(daily)level=daily.level;
+  dialogue.beginRound();
   stopAudio();
   speed = selectedSpeed; clock.start(speed); started = true; paused = false; notice = null;
   byId('intro-card').hidden = true; byId('pause-card').hidden = true; byId('pause-button').hidden = false;
-  session = new PreviewTenPunchSession(clock, Object.fromEntries(Object.entries(assets).map(([id, asset]) => [id, asset.source.id])), { seed });
+  session = new PreviewTenPunchSession(clock, Object.fromEntries(Object.entries(assets).map(([id, asset]) => [id, asset.source.id])), { seed, maxHits:5, survivalLevel:level });
   acceptedAt.clear(); playedResults = 0; showingResults = false;
   byId('seed-input').value = String(session.snapshot().seed);
   byId('result-card').classList.remove('visible');
   stage.classList.remove('hit');
   document.querySelector('.controls').hidden = false;
-  buttons.forEach(button => { button.disabled = false; button.classList.remove('pressed'); });
-  session.start({ leadInMs: (returning ? 800 : 2000) * speed });
+  buttons.forEach(button => { button.hidden = ['DUCK','STEP_IN'].includes(button.dataset.btn) && level !== 3; button.disabled = button.hidden; button.classList.remove('pressed'); });
+  session.start({ leadInMs: daily?.leadInMs ?? (returning ? 800 : 2000) * speed });
   focusButton('pause-button'); requestFrame();
 }
 
@@ -171,7 +234,7 @@ for (const button of buttons) {
   button.addEventListener('click', event => { if (event.detail === 0) handleInput(button.dataset.btn); });
   for (const name of ['pointerup', 'pointerleave', 'pointercancel']) button.addEventListener(name, () => button.classList.remove('pressed'));
 }
-const keys = { KeyA: 'LEFT', KeyD: 'RIGHT', KeyS: 'BACK', KeyW: 'GUARD' };
+const keys = { KeyA: 'LEFT', KeyD: 'RIGHT', KeyS: 'BACK', KeyW: 'GUARD', KeyQ: 'DUCK', KeyE: 'STEP_IN' };
 addEventListener('keydown', event => {
   if (event.target instanceof HTMLInputElement || event.repeat || !keys[event.code]) return;
   event.preventDefault(); handleInput(keys[event.code]);
@@ -193,16 +256,21 @@ byId('sound-button').addEventListener('click', () => {
 });
 addEventListener('visibilitychange', () => { if (document.hidden) pauseRound(); });
 addEventListener('blur', pauseRound);
-byId('begin-button').addEventListener('click', () => start(session.snapshot().seed, ROUND_SPEEDS.relaxed));
-byId('fast-button').addEventListener('click', () => start(session.snapshot().seed, ROUND_SPEEDS.original));
+byId('begin-button').addEventListener('click', () => {if(ready)start(session.snapshot().seed, LEVELS[level].rate);});
+byId('daily-button').addEventListener('click',()=>void openRecords());
+byId('daily-start-button').addEventListener('click',()=>void beginDaily());
+byId('records-close-button').addEventListener('click',closeRecords);
+byId('records-card').addEventListener('keydown',event=>{if(event.key==='Escape')closeRecords();if(event.key==='Tab'){const enabled=[byId('daily-start-button'),byId('records-close-button')].filter(b=>!b.disabled);event.preventDefault();enabled[(enabled.indexOf(document.activeElement)+(event.shiftKey?-1:1)+enabled.length)%enabled.length].focus();}});
+byId('promote-button').addEventListener('click',()=>{if(level<3 && progress.unlocked>level){level++;start((session.snapshot().seed+1)>>>0,LEVELS[level].rate);}});
 byId('mode-button').addEventListener('click', () => {
+  requestVersion++;challenge=null;inputs=[];level=Math.min(level,progress.unlocked);renderLevels();
   clock.pause(); started = false; paused = false; showingResults = false; playedResults = 0; acceptedAt.clear();
-  session = new PreviewTenPunchSession(clock, Object.fromEntries(Object.entries(assets).map(([id, asset]) => [id, asset.source.id])), {seed:session.snapshot().seed});
+  session = new PreviewTenPunchSession(clock, Object.fromEntries(Object.entries(assets).map(([id, asset]) => [id, asset.source.id])), {seed:session.snapshot().seed,maxHits:5,survivalLevel:level});
   byId('result-card').classList.remove('visible'); byId('intro-card').hidden=false; byId('pause-button').hidden=true;
   document.querySelector('.controls').hidden=true; stopAudio(); focusButton('begin-button'); requestFrame();
 });
-byId('retry-button').addEventListener('click', () => { const snapshot = session.snapshot(); start(getRematchReview(snapshot.results, speed, true).replaySameSeed ? snapshot.seed : (snapshot.seed + 1) >>> 0); });
-byId('new-pattern-button').addEventListener('click', () => start((session.snapshot().seed + 1) >>> 0));
+byId('retry-button').addEventListener('click', () => { if(challenge){void beginDaily();return;} const snapshot = session.snapshot(); start(getRematchReview(snapshot.results, speed, true).replaySameSeed ? snapshot.seed : (snapshot.seed + 1) >>> 0); });
+byId('new-pattern-button').addEventListener('click', () => {if(challenge){challenge=null;level=Math.min(level,progress.unlocked);}start((session.snapshot().seed + 1) >>> 0,LEVELS[level].rate);});
 byId('replay-seed-button').addEventListener('click', () => start(session.snapshot().seed));
 byId('start-seed-button').addEventListener('click', () => {
   const seed = Number(byId('seed-input').value);
@@ -210,15 +278,18 @@ byId('start-seed-button').addEventListener('click', () => {
 });
 
 async function init() {
-  renderCoach('coach-intro', COACH_INTRO);
+  renderLevels();renderCoach('coach-intro', COACH_INTRO);
   for (const file of ['lead-jab.json', 'rear-straight.json', 'lead-hook.json']) {
     const response = await fetch(`/src/game/assets/motion/${file}`);
     if (!response.ok) throw new Error(`Motion load failed: ${response.status}`);
     const asset = await response.json(); assets[asset.attackId] = asset;
   }
+  // The native app registers the same authored uppercut source without a mocap clip.
+  assets.LEAD_UPPERCUT_HEAD = {attackId:'LEAD_UPPERCUT_HEAD',source:{id:'authored-uppercut-v1'},visualRecoveryMs:860,timeline:[],jointNames:[],frames:[]};
   const rawSeed = new URLSearchParams(location.search).get('seed');
   session = new PreviewTenPunchSession(clock, Object.fromEntries(Object.entries(assets).map(([id, asset]) => [id, asset.source.id])),
-    { seed: rawSeed !== null && Number.isInteger(Number(rawSeed)) ? Number(rawSeed) : Date.now() >>> 0 });
+    { maxHits:5, survivalLevel:level, seed: rawSeed !== null && Number.isInteger(Number(rawSeed)) ? Number(rawSeed) : Date.now() >>> 0 });
+  ready=true;byId('begin-button').disabled=false;byId('daily-button').disabled=false;
   byId('seed-input').value = String(session.snapshot().seed);
   requestFrame();
   if (debug) window.__p0Preview = { snapshot: () => session.snapshot(), handleInput, retrySameSeed: () => start(session.snapshot().seed), startSeed: start };
@@ -227,12 +298,13 @@ function tick() {
     frameId = null;
     const snapshot = started && !paused ? session.tick() : session.snapshot();
     draw(getFirstPersonFrame(snapshot, assets, acceptedAt));
-    byId('punch-count').textContent = `${snapshot.results.length} / 10`;
+    byId('punch-count').textContent = `${snapshot.results.length} / 30`;
+    byId('lives').textContent = `목숨 ${'♥'.repeat(snapshot.livesRemaining ?? 5)}${'♡'.repeat(5-(snapshot.livesRemaining ?? 5))} · ${snapshot.livesRemaining ?? 5} / 5`;
     byId('instance').textContent = snapshot.currentAttack.attackInstanceId;
     bars.forEach((bar, index) => { bar.className = `progress-bar ${snapshot.results.length > index ? `resolved ${snapshot.results[index].outcome.toLowerCase()}` : snapshot.currentAttackIndex === index ? 'current' : ''}`; });
     for (const result of snapshot.results.slice(playedResults)) playSfx(result);
     playedResults = snapshot.results.length;
-    buttons.forEach(button => { button.disabled = !started || paused || snapshot.sessionCompleted; });
+    buttons.forEach(button => { button.disabled = button.hidden || !started || paused || snapshot.sessionCompleted; });
     // Leave the final contact/recovery visible before covering it with results.
     if (snapshot.sessionCompleted && !showingResults && snapshot.nowMs - snapshot.latestResult.telemetry.impactScheduledAtMs >= 280) { showResults(snapshot); byId('pause-button').hidden = true; }
     if (started && !paused && !showingResults) requestFrame();

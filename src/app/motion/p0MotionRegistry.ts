@@ -24,6 +24,20 @@ export function getP0MotionSourceIds(): Readonly<Record<string, string>> {
   );
 }
 
+// Champion uses an authored screen-space uppercut, not a canonical mocap clip.
+const UPPERCUT_PRESENTATION_ASSET: MotionAsset = {
+  attackId: 'LEAD_UPPERCUT_HEAD', source: {id:'authored-uppercut-v1'},
+  visualRecoveryMs: 860, timeline: [], jointNames: [], frames: [],
+};
+
+export function getSurvivalMotionAsset(attackId: string): MotionAsset {
+  return attackId === UPPERCUT_PRESENTATION_ASSET.attackId ? UPPERCUT_PRESENTATION_ASSET : getP0MotionAsset(attackId);
+}
+
+export function getSurvivalMotionSourceIds(): Readonly<Record<string, string>> {
+  return {...getP0MotionSourceIds(), [UPPERCUT_PRESENTATION_ASSET.attackId]: UPPERCUT_PRESENTATION_ASSET.source.id};
+}
+
 export function sampleP0AttackPose(attackId: string, elapsedMs: number): SampledPose {
   return sampleMotionPose(getP0MotionAsset(attackId), elapsedMs);
 }

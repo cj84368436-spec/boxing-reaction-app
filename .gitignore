@@ -6,3 +6,20 @@ coverage/
 .granite/
 *.ait
 .preview-dist/
+
+# Local anonymous comparison records
+local-data/
+
+# Local build caches, inspection artifacts and credentials
+.swc/
+.tmp/
+.verify-temp/
+artifacts/
+release-backup/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks

@@ -1,7 +1,8 @@
 import { candidateCombatPose } from './candidateCombatPose.js';
 import { candidateFailureReason } from '../session/candidateRules.js';
-import { isWeaveInput, presentationInput } from '../session/advancedDefense.js';
 import { P0_ATTACKS } from '../../game/config/p0Attacks.js';
+import { CHAMPION_UPPERCUT } from '../session/championRules.js';
+import type { DefenseControlInput } from '../session/advancedDefense.js';
 import type { TenPunchSessionSnapshot } from '../session/P0TenPunchSession.js';
 import { projectFrontPose } from './projectFrontPose.js';
 import { sampleMotionPose } from './sampleMotionPose.js';
@@ -81,8 +82,10 @@ export function getFirstPersonFrame(
 ) {
   // Engine advances on impact; presentation must finish the punch and recovery.
   const started = snapshot.scheduledAttacks.filter(a => a.attackStartScheduledAtMs != null && a.attackStartScheduledAtMs <= snapshot.nowMs);
-  const visible = started.at(-1) ?? snapshot.scheduledAttacks[0]!;
-  const attack = P0_ATTACKS[visible.attackId as keyof typeof P0_ATTACKS];
+  const visible = snapshot.knockedOut && snapshot.latestResult
+    ? snapshot.scheduledAttacks[snapshot.latestResult.attackIndex]!
+    : started.at(-1) ?? snapshot.scheduledAttacks[0]!;
+  const attack = visible.attackId===CHAMPION_UPPERCUT.attackId?CHAMPION_UPPERCUT:P0_ATTACKS[visible.attackId as keyof typeof P0_ATTACKS];
   const asset = assets[visible.attackId]!;
   const candidate = snapshot.ruleset === 'candidate';
   const project = (asset: MotionAsset, elapsed: number) => candidate ? candidateCombatPose(asset.attackId, elapsed) : projectCombatPose(asset, elapsed);
@@ -91,27 +94,26 @@ export function getFirstPersonFrame(
   const impactAt = start + attack.impactMs;
   const result = snapshot.results.find(r => r.attackInstanceId === visible.attackInstanceId);
   const inputState = result?.telemetry ?? (snapshot.currentAttack.attackInstanceId === visible.attackInstanceId ? snapshot.currentAttack : undefined);
-  const rawInput = inputState?.inputStatus === 'VALID' || (candidate && inputState?.inputStatus === 'EARLY') ? inputState.inputButton : undefined;
-  const input = presentationInput(rawInput);
+  const input = (inputState?.inputStatus === 'VALID' || (candidate && inputState?.inputStatus === 'EARLY') ? inputState.inputButton : undefined) as DefenseControlInput | undefined;
   const inputAt = inputState?.inputAtMs ?? result?.telemetry.inputAtMs ?? acceptedAt.get(visible.attackInstanceId) ?? snapshot.nowMs;
   const enterMs = Math.max(1, Math.min(90, impactAt - inputAt));
   const early = inputState?.inputStatus === 'EARLY';
   const strength = input == null ? 0 : ease((snapshot.nowMs - inputAt) / enterMs) * (1 - ease((snapshot.nowMs - (early ? inputAt + 100 : impactAt + 60)) / 140));
   const direction = input === 'LEFT' ? 1 : input === 'RIGHT' ? -1 : 0;
-  const weaving = isWeaveInput(rawInput) || (attack.punchType === 'HOOK' && input === 'RIGHT');
+  const weaving = attack.punchType === 'HOOK' && input === 'RIGHT';
   // A lateral move into the lead hook does not clear its contact radius.
   // The right weave clears it vertically; a left attempt remains visibly caught.
   const failedStraight = candidate && attack.hand === 'REAR' && (input === 'RIGHT' || input === 'BACK');
   const clearance = failedStraight ? 18 : attack.punchType === 'HOOK' && input === 'LEFT' ? 22 : 64;
   const cameraX = strength > 0 ? direction * clearance * strength : 0;
-  const cameraY = weaving && strength > 0 ? -80 * strength : 0;
-  const cameraScale = input === 'BACK' ? 1 - (failedStraight ? 0.06 : 0.24) * strength : 1;
+  const cameraY = strength > 0 ? weaving ? -80 * strength : input === 'DUCK' ? -70 * strength : 0 : 0;
+  const cameraScale = input === 'BACK' ? 1 - (failedStraight ? 0.06 : 0.24) * strength : input === 'STEP_IN' ? 1 + 0.12 * strength : 1;
   const guard = input === 'GUARD' ? strength * (candidate && (result?.outcome === 'HIT' || (!result && snapshot.guardEnergy === 0)) ? .32 : 1) : 0;
   const age = snapshot.nowMs - impactAt;
   const hit = result?.outcome === 'HIT' && age >= 0 && age < 140;
   let pose = project(asset, elapsedMs);
   const next = snapshot.scheduledAttacks[visible.attackIndex + 1];
-  if (next?.attackStartScheduledAtMs != null) {
+  if (!snapshot.knockedOut && next?.attackStartScheduledAtMs != null) {
     // The shared game schedule may start the next combo punch before the source
     // clip finishes. Blend only the recovery presentation, never the cue/impact.
     const blendStart = Math.max(impactAt + 60, Math.min(start + asset.visualRecoveryMs, next.attackStartScheduledAtMs - 100));
@@ -130,11 +132,11 @@ export function getFirstPersonFrame(
       : result.telemetry.inputStatus === 'EARLY' ? '피격 · 너무 빠름'
         : result.telemetry.inputStatus === 'LATE' ? '피격 · 너무 늦음'
           : result.telemetry.inputStatus === 'MULTI_INPUT' ? '피격 · 하나씩 입력'
-            : candidate ? '피격 · ' + candidateFailureReason(visible.attackId, rawInput) : '피격 · 회피 방향';
+            : candidate ? '피격 · ' + candidateFailureReason(visible.attackId, input) : '피격 · 회피 방향';
   const cueActive = snapshot.nowMs >= start + attack.cueAnchorMs && age < 0;
   const hand: 'rHand' | 'lHand' = attack.hand === 'REAR' ? 'rHand' : 'lHand';
   const trail = [90, 60, 30].map(delay => project(asset, Math.max(0, elapsedMs - delay))[hand]);
-  const hint = attack.punchType === 'HOOK' ? '훅 · 오른쪽으로 숙이세요'
+  const hint = attack.punchType === 'UPPERCUT' ? '어퍼컷 · 뒤로 피하세요' : attack.punchType === 'HOOK' ? '훅 · 오른쪽으로 숙이세요'
     : attack.hand === 'REAR' ? '스트레이트 · 왼쪽으로 피하세요' : '잽 · 좌우로 피하세요';
   return { attackId: visible.attackId, elapsedMs, pose, cameraX, cameraY, cameraScale, guard, hit, feedback,
     cueActive, hand, trail, hint, contact: age >= 0 && age < 100, outcome: result?.outcome };

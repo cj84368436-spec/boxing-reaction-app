@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>복싱 10타 챌린지</title>
+  <title>복싱 재능 테스트</title>
   <style>
     :root { color-scheme: dark; font-family: Inter, Pretendard, system-ui, sans-serif; }
     * { box-sizing: border-box; }
@@ -108,21 +108,59 @@
       #coach-result .coach-note { display:none; }
     }
     .intro-copy > * { flex-shrink:0; }
-  </style>
+
+    body {background:#0a1519;}
+    .device {background:#10262b;border:0;border-radius:14px;gap:6px;padding:10px;}
+    h1 {font-size:22px;font-weight:950;color:#fff0d2;letter-spacing:-1px;}
+    .kicker {color:#b3c2bb;letter-spacing:0;font-size:10px;}
+    #status {border:0;background:transparent;border-radius:0;min-height:24px;padding:2px;font-size:12px;color:#ead9b8;}
+    .stage {border:3px solid #071518;border-radius:10px;background:#193238 url('/src/app/assets/art/gym.png') center/cover no-repeat;}
+    .progress-bar {height:6px;border-radius:2px;background:#314649;}
+    .progress-bar.current {background:#ef5444;}
+    .defense-btn {border:3px solid #0b151a;border-bottom-width:5px;border-radius:10px;background:#c13b32;color:#fff1db;text-shadow:0 1px #53271d;font-size:17px;font-weight:900;}
+    .defense-btn[data-btn=BACK],.defense-btn[data-btn=GUARD] {background:#285ca1;}
+    .defense-btn[data-btn=DUCK],.defense-btn[data-btn=STEP_IN] {background:#805531;}
+    .defense-btn.pressed {background:#ecb44d;color:#1c2624;border-color:#fff0bf;}
+    #coach-ringside {background:#f2e2be;border:2px solid #101b20;border-radius:8px;min-height:64px;}
+    #coach-ringside > svg {width:70px;height:62px;background:transparent;border-radius:0;}
+    #coach-ringside .coach-line {color:#1d3033;font-size:13px;}
+    #coach-ringside .coach-label {color:#746a56;font-size:11px;}
+    .coach-card > svg {background:transparent;border-radius:0;}
+    #intro-card {background:linear-gradient(0deg,#10262bf5 0%,#10262bdc 52%,#10262b22 100%);}
+    #intro-card .intro-copy {justify-content:flex-end;gap:9px;padding:12px;}
+    #coach-intro > svg {width:82px;height:96px;}
+    #coach-intro .coach-note {display:none;}
+    #intro-card h2 {font-size:24px;color:#fff1d8;}
+    #intro-card p {font-size:12px;line-height:19px;color:#e0e5d7;}
+    .intro-actions {padding:10px;background:#10262bf0;}
+    .primary {background:#e4b658;color:#152628;border:2px solid #091619;border-bottom-width:4px;border-radius:8px;}
+    .secondary {background:#23494e;border-radius:8px;}
+    @media(max-height:650px){h1{font-size:18px}.kicker{display:block;font-size:9px}#coach-ringside{min-height:48px}#coach-ringside>svg{height:48px;width:54px}.defense-btn{min-height:48px;font-size:14px}#coach-intro>svg{width:56px;height:65px}#intro-card h2{font-size:20px}#intro-card .intro-copy{padding:8px;gap:5px}}
+  #level-options{display:flex;gap:6px}#level-options button{flex:1;min-height:38px;background:#233a4d;color:#dce8e2;border:0;border-radius:8px;font-weight:800}#level-options button.selected{background:#d4af66;color:#152629}#level-options button:disabled{opacity:.45}.record-card{padding:10px;background:#193532;border-radius:10px;margin:8px 0;color:#dce8e2}.record-card strong{color:#f3c969}.record-card p{font-size:12px;margin:5px 0}.record-card small{font-size:11px;line-height:16px;display:block}.progress{gap:2px;grid-template-columns:repeat(30,1fr)}#promote-button{background:#e4b658;color:#152628}#promote-button[hidden]{display:none}
+.secondary-actions{display:flex;gap:8px}.secondary-actions button{flex:1;min-width:0} @media(max-height:650px){#intro-card .intro-copy{justify-content:flex-start}#coach-intro .coach-line{font-size:15px;line-height:20px}#coach-intro{padding:4px 0}}
+#records-card{padding:0;gap:0;overflow:hidden}#records-card>.records-content{flex:1;min-height:0;flex-shrink:1;overflow:auto;padding:14px;margin:0}#records-card>.intro-actions{flex-shrink:0;margin:0;padding:12px;display:flex;flex-direction:column;gap:8px}#records-card .record-card{font-size:13px;line-height:20px}#records-card h3{color:#f3c969}
+</style>
+  <link rel="preload" as="image" href="/src/app/assets/art/jab.png">
+  <link rel="preload" as="image" href="/src/app/assets/art/uppercut.png">
+  <link rel="preload" as="image" href="/src/app/assets/art/straight.png">
+  <link rel="preload" as="image" href="/src/app/assets/art/hook.png">
+  <link rel="preload" as="image" href="/src/app/assets/art/coach-skinny.png">
+  <link rel="preload" as="image" href="/src/app/assets/art/gloves.png">
+  <link rel="preload" as="image" href="/src/app/assets/art/gym.png">
 </head>
 <body>
   <main class="shell">
-    <div class="watermark">브라우저 플레이 · 앱인토스 기기 테스트 전</div>
+    <div class="watermark">만화풍 재제작 후보 · 실제 기기 확인 전</div>
     <section class="device" aria-label="P0 Browser Preview">
-      <header class="hud"><div><h1>복싱 10타 챌린지</h1><div class="kicker">주먹을 읽고, 한 번씩 피하세요</div></div><div class="hud-right"><span id="punch-count">0 / 10</span><button id="sound-button" type="button" aria-label="소리 끄기">소리 켜짐</button></div></header>
+      <header class="hud"><div><h1>복싱 재능 테스트</h1><div class="kicker"><span id="lives">목숨 ♥♥♥♥♥ · 5 / 5</span></div></div><div class="hud-right"><span id="punch-count">0 / 30</span><button id="sound-button" type="button" aria-label="소리 끄기">소리 켜짐</button></div></header>
       <div id="status">공격마다 버튼 한 번</div>
       <div class="progress">
         <div class="progress-bar"></div><div class="progress-bar"></div><div class="progress-bar"></div><div class="progress-bar"></div><div class="progress-bar"></div>
         <div class="progress-bar"></div><div class="progress-bar"></div><div class="progress-bar"></div><div class="progress-bar"></div><div class="progress-bar"></div>
       </div>
       <div class="stage" id="stage">
-        <div class="rope r1"></div><div class="rope r2"></div><div class="rope r3"></div>
-        <div class="boxer-camera" id="boxer-camera"><svg id="boxer-svg" viewBox="0 0 280 400"></svg></div>
+        
+        <div class="boxer-camera" id="boxer-camera"><svg id="boxer-svg" viewBox="0 0 280 400" preserveAspectRatio="xMidYMid slice"></svg></div>
 
         <div id="round-hint"></div><span id="mode-label" hidden></span>
         <button id="pause-button" type="button" aria-label="일시 정지" hidden>Ⅱ 정지</button>
@@ -130,21 +168,30 @@
           <div class="intro-copy">
           <div id="coach-intro"></div>
           <h2>주먹을 보고, 피하세요.</h2>
-          <p>화면 아래 버튼을 눌러 피하세요.<br>짧은 잽은 좌우, 어깨를 젖히는 뒷손은 왼쪽.<br>팔을 벌려 옆으로 오는 훅은 오른쪽으로 숙이세요.</p>
-          <p>가드는 두 번, 회피하면 한 칸 회복.<br>스트레이트는 뒤로 빠져도 닿아요.</p>
+          <p>잽은 좌우 · 스트레이트는 왼쪽<br>옆으로 오는 훅은 오른쪽으로 숙이세요.</p>
+          <p>30회 생존하면 클리어. 다섯 번 맞으면 다운됩니다.<br>가드는 두 번, 회피하면 한 칸 회복.<br>스트레이트는 뒤로 빠져도 닿아요.</p>
+          <p>30회 버티면 다음 단계 해금. 챔피언에서 6버튼과 어퍼컷이 열립니다.</p>
           </div><div class="intro-actions">
-          <button id="begin-button" class="primary" type="button">여유 있게 시작</button>
-          <button id="fast-button" class="secondary" type="button">원래 속도로 도전</button>
-          <small>회피는 한 동작씩. 너무 빠르면 복귀 뒤 다시 누르세요.</small>
+          <div id="level-options"></div><small id="personal-best"></small>
+          <button id="begin-button" disabled class="primary" type="button">입문 도전 시작</button>
+          <button id="daily-button" disabled class="secondary" type="button">오늘의 코스 · 기록 보기</button>
+          <small id="storage-note"></small><small>오늘의 코스는 같은 난이도·순서로 진행하며 익명 기록을 제출합니다.</small>
         </div></div>
+        <div class="intro-card" id="records-card" hidden role="dialog" aria-modal="true" aria-labelledby="records-title">
+          <div class="records-content"><h2 id="records-title">내 기록</h2><div id="records-list"></div>
+          <h3>오늘의 코스</h3><p>모두 같은 도전자 난이도와 공격 순서로 겨룹니다.</p>
+          <small id="records-standing" aria-live="polite"></small>
+          </div><div class="intro-actions"><button id="daily-start-button" class="primary" type="button">오늘의 코스 도전</button>
+          <button id="records-close-button" class="secondary" type="button">돌아가기</button></div>
+        </div>
         <div class="intro-card" id="pause-card" hidden><h2>잠시 쉬어갑니다</h2><p>멈춘 순간부터 이어집니다.<br>준비되면 계속하기를 눌러주세요.</p><button id="resume-button" class="primary" type="button">계속하기</button></div>
         <div class="result-card" id="result-card">
-          <div class="result-content"><div class="result-title" id="result-title" role="heading" aria-level="2" aria-live="polite">라운드 종료</div><div id="coach-result"></div><div class="rematch-focus"><strong id="rematch-title"></strong><p id="rematch-body"></p></div>
+          <div class="result-content"><div class="result-title" id="result-title" role="heading" aria-level="2" aria-live="polite">라운드 종료</div><div id="coach-result"></div><div class="record-card"><strong id="record-title"></strong><p id="record-detail"></p><p id="promotion-note"></p><small id="rank-note"></small></div><div class="rematch-focus"><strong id="rematch-title"></strong><p id="rematch-body"></p></div>
           <div class="summary"><span id="summary-perfect" class="perfect"></span><span id="summary-safe" class="safe"></span><span id="summary-hit" class="hit"></span></div>
           <div id="result-list"></div></div>
-          <button aria-label="다시 도전" id="retry-button" type="button"><span id="retry-label">관장에게 다시 도전</span><small id="retry-note">같은 공격 순서 · 같은 속도</small></button>
+          <button id="promote-button" type="button" class="primary" hidden>다음 난이도 도전</button><button aria-label="다시 도전" id="retry-button" type="button"><span id="retry-label">다시 도전</span><small id="retry-note">같은 공격 순서 · 같은 속도</small></button>
           <button id="replay-seed-button" type="button" hidden>같은 공격으로 다시</button>
-          <button id="new-pattern-button" type="button" style="background:#243b4d">다른 패턴 도전</button><button id="mode-button" type="button">속도 다시 선택</button>
+          <div class="secondary-actions"><button id="new-pattern-button" type="button" style="background:#243b4d">다른 패턴 도전</button><button id="mode-button" type="button">난이도 선택</button></div>
         </div>
       </div>
       <div class="debug"><label for="seed-input">SEED</label><input id="seed-input" type="number" inputmode="numeric"><button id="start-seed-button" type="button">START SEED</button><span id="instance"></span></div>
@@ -152,6 +199,7 @@
       <div class="controls" hidden>
         <button type="button" class="defense-btn" data-btn="LEFT">← 왼쪽 <small>A</small></button><button type="button" class="defense-btn" data-btn="RIGHT">오른쪽 → <small>D</small></button>
         <button type="button" class="defense-btn" data-btn="BACK">뒤로 피하기 <small>S</small></button><button type="button" class="defense-btn" data-btn="GUARD">가드 <small>W</small></button>
+        <button type="button" class="defense-btn" data-btn="DUCK" hidden>숙이기 <small>Q</small></button><button type="button" class="defense-btn" data-btn="STEP_IN" hidden>앞으로 파고들기 <small>E</small></button>
       </div>
     </section>
   </main>

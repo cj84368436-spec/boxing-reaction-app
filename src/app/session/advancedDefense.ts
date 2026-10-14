@@ -1,70 +1,25 @@
-import type {
-  AdvancedDefenseInput,
-  BeginnerDefenseInput,
-  DefenseInput,
-  DefenseOutcome,
-} from '../../game/model/types';
+import type { DefenseInput, DefenseOutcome } from '../../game/model/types.js';
 
-export type DefenseControlMode = 'BEGINNER' | 'ADVANCED';
-type AdvancedAttackId = 'LEAD_JAB_HEAD' | 'REAR_STRAIGHT_HEAD' | 'LEAD_HOOK_HEAD';
+export type DefenseControlInput = DefenseInput | 'DUCK' | 'STEP_IN';
 
-const BEGINNER_CONTROLS = ['LEFT', 'RIGHT', 'BACK', 'GUARD'] as const;
-const ADVANCED_CONTROLS = [
-  'SLIP_LEFT',
-  'SLIP_RIGHT',
-  'WEAVE_LEFT',
-  'WEAVE_RIGHT',
-  'SWAY',
-  'GUARD',
-] as const;
+const BASIC_CONTROLS = ['LEFT', 'RIGHT', 'BACK', 'GUARD'] as const;
+const CHAMPION_CONTROLS = [...BASIC_CONTROLS, 'DUCK', 'STEP_IN'] as const;
 
-const ADVANCED_DEFENSE_MATRIX: Record<
-  AdvancedAttackId,
-  Record<AdvancedDefenseInput, DefenseOutcome>
-> = {
-  LEAD_JAB_HEAD: {
-    SLIP_LEFT: 'PERFECT', SLIP_RIGHT: 'PERFECT',
-    WEAVE_LEFT: 'HIT', WEAVE_RIGHT: 'HIT',
-    SWAY: 'SAFE', GUARD: 'SAFE',
-  },
-  REAR_STRAIGHT_HEAD: {
-    SLIP_LEFT: 'PERFECT', SLIP_RIGHT: 'HIT',
-    WEAVE_LEFT: 'HIT', WEAVE_RIGHT: 'HIT',
-    SWAY: 'HIT', GUARD: 'SAFE',
-  },
-  LEAD_HOOK_HEAD: {
-    SLIP_LEFT: 'HIT', SLIP_RIGHT: 'HIT',
-    WEAVE_LEFT: 'HIT', WEAVE_RIGHT: 'PERFECT',
-    SWAY: 'SAFE', GUARD: 'SAFE',
-  },
+const EXTRA_OUTCOMES: Readonly<Record<string, Readonly<Record<'DUCK' | 'STEP_IN', DefenseOutcome>>>> = {
+  LEAD_JAB_HEAD: { DUCK: 'SAFE', STEP_IN: 'HIT' },
+  REAR_STRAIGHT_HEAD: { DUCK: 'PERFECT', STEP_IN: 'HIT' },
+  LEAD_HOOK_HEAD: { DUCK: 'SAFE', STEP_IN: 'PERFECT' },
+  LEAD_UPPERCUT_HEAD: { DUCK: 'HIT', STEP_IN: 'HIT' },
 };
 
-export function controlsForMode(mode: DefenseControlMode): readonly DefenseInput[] {
-  return mode === 'ADVANCED' ? ADVANCED_CONTROLS : BEGINNER_CONTROLS;
+export function controlsForLevel(level: 1 | 2 | 3): readonly DefenseControlInput[] {
+  return level === 3 ? CHAMPION_CONTROLS : BASIC_CONTROLS;
 }
 
-export function isAdvancedDefenseInput(input: DefenseInput): input is AdvancedDefenseInput {
-  return input !== 'LEFT' && input !== 'RIGHT' && input !== 'BACK';
+export function isExtraDefense(input: DefenseControlInput): input is 'DUCK' | 'STEP_IN' {
+  return input === 'DUCK' || input === 'STEP_IN';
 }
 
-export function isBeginnerDefenseInput(input: DefenseInput): input is BeginnerDefenseInput {
-  return input === 'LEFT' || input === 'RIGHT' || input === 'BACK' || input === 'GUARD';
-}
-
-export function presentationInput(input: DefenseInput | undefined): BeginnerDefenseInput | undefined {
-  if (input === 'SLIP_LEFT' || input === 'WEAVE_LEFT') return 'LEFT';
-  if (input === 'SLIP_RIGHT' || input === 'WEAVE_RIGHT') return 'RIGHT';
-  if (input === 'SWAY') return 'BACK';
-  return input;
-}
-
-export function isWeaveInput(input: DefenseInput | undefined): boolean {
-  return input === 'WEAVE_LEFT' || input === 'WEAVE_RIGHT';
-}
-
-export function resolveAdvancedDefense(
-  attackId: string,
-  input: AdvancedDefenseInput,
-): DefenseOutcome {
-  return ADVANCED_DEFENSE_MATRIX[attackId as AdvancedAttackId]?.[input] ?? 'HIT';
+export function extraDefenseOutcome(attackId: string, input: 'DUCK' | 'STEP_IN'): DefenseOutcome {
+  return EXTRA_OUTCOMES[attackId]?.[input] ?? 'HIT';
 }

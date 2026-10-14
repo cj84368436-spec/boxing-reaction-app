@@ -22,6 +22,10 @@
     "src/app/session/P0ThreeSingleAttackSession.ts",
     "src/app/session/P0TenPunchSession.ts",
     "src/app/session/RoundClock.ts",
-    "src/app/session/seededComboOrder.ts"
+    "src/app/session/seededComboOrder.ts",
+    "src/app/motion/cartoonSprites.ts",
+    "src/app/motion/artAtlas.ts",
+    "src/app/session/progression.ts",
+    "src/app/session/competitionClient.ts"
   ]
 }
