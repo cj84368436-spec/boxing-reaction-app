@@ -1,5 +1,5 @@
-import { chromium } from 'file:///C:/Users/cj799/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
-const browser=await chromium.launch({channel:'msedge',headless:true});
+import { chromium } from './qa-runtime.mjs';
+const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:390,height:844}});
 await page.clock.install(); await page.clock.pauseAt(new Date());
 await page.goto('http://127.0.0.1:3000/?debug=1&seed=123'); await page.waitForFunction(()=>window.__p0Preview);

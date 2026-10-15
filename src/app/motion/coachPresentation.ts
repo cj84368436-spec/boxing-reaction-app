@@ -1,3 +1,4 @@
+import {attackLabel} from './attackNames.js';
 import { candidateFailureReason, CANDIDATE_ATTACKS } from '../session/candidateRules.js';
 import { P0_ATTACKS } from '../../game/config/p0Attacks.js';
 import { CoachDialogue, resultCoachReaction } from './coachDialogue.js';
@@ -61,7 +62,7 @@ const baseReaction = dialogueContext ? resultCoachReaction(counts, dialogueConte
     return lateMs > 0 && lateMs <= 80 ? {result, lateMs} : null;
   }).filter((entry): entry is NonNullable<typeof entry> => entry !== null).sort((a,b) => a.lateMs - b.lateMs)[0];
   const target = closeLate?.result ?? hits[0];
-  const label = target?.attackId === 'LEAD_JAB_HEAD' ? '잽' : target?.attackId === 'REAR_STRAIGHT_HEAD' ? '스트레이트' : '훅';
+  const label = target ? attackLabel(target.attackId) : '';
   let focusTitle = counts.PERFECT === totalPunches ? '관장의 말문을 막았습니다' : totalPunches+'회를 버텼습니다';
   let focusBody = counts.PERFECT === totalPunches ? '모두 완벽 회피. 새 공격 순서에서도 보여주세요.' : '방어 성공. 다음에는 완벽 회피를 늘려보세요.';
   if (target) {

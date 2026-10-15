@@ -1,0 +1,3 @@
+import {build} from 'esbuild';
+// esbuild is already locked transitively by Granite. Never import the native SDK in a browser.
+await build({entryPoints:['tools/browser-preview/product-preview.ts'],outfile:'.preview-dist/qa-product.js',bundle:true,format:'esm',platform:'browser',plugins:[{name:'native-sdk-disabled',setup(build){build.onResolve({filter:/^@apps-in-toss\/framework$/},()=>({path:'native',namespace:'qa'}));build.onLoad({filter:/.*/,namespace:'qa'},()=>({contents:'export const loadFullScreenAd = Object.assign(()=>{throw Error("Use the explicit QA port")},{isSupported:()=>false}); export const showFullScreenAd=loadFullScreenAd;'}));}}]});

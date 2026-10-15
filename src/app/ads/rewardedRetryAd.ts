@@ -1,3 +1,4 @@
+import {AdEvents, type AdEventObserver} from './adEvents';
 import {loadFullScreenAd, showFullScreenAd} from '@apps-in-toss/framework';
 
 import {ACTIVE_REWARDED_RETRY_AD_GROUP_ID} from './adGroupIds';
@@ -58,10 +59,12 @@ export class RewardedRetryAdController implements RewardedRetryAdGate {
   private observer: ((state: RewardedRetryAdState) => void) | undefined;
   private phase: RewardedRetryAdPhase = 'idle';
 
+  private readonly events:AdEvents;
   constructor(
     private readonly port: FullScreenAdPort = sdkPort,
     private readonly adGroupId = ACTIVE_REWARDED_RETRY_AD_GROUP_ID,
-  ) {}
+    observer?:AdEventObserver,
+  ) {this.events=new AdEvents('rewarded',observer);}
 
   prepare(observer: (state: RewardedRetryAdState) => void): () => void {
     this.observer = observer;
@@ -78,8 +81,9 @@ export class RewardedRetryAdController implements RewardedRetryAdGate {
     if (this.phase !== 'ready') return false;
     let supported: boolean;
     try { supported = this.port.isShowSupported(); }
-    catch { this.emit('error', '광고를 표시하지 못했습니다. 다시 눌러 주세요.'); return false; }
+    catch { this.events.emit('ad_fail','sdk');this.emit('error', '광고를 표시하지 못했습니다. 다시 눌러 주세요.'); return false; }
     if (!supported) {
+      this.events.emit('ad_fail','unsupported');
       this.emit('unsupported', '광고는 토스 앱의 QR 테스트에서 확인할 수 있습니다.');
       return false;
     }
@@ -93,24 +97,27 @@ export class RewardedRetryAdController implements RewardedRetryAdGate {
       operation.stop();
       this.recoverAfterReturn = undefined;
       this.emit('idle', '');
+      this.events.emit('ad_complete');
       onRewardedAndClosed();
     };
     const fail = () => {
       if (!operation.active) return;
       operation.stop();
       this.recoverAfterReturn = undefined;
+      this.events.emit('ad_fail','show');
       this.emit('error', '광고를 표시하지 못했습니다. 다시 눌러 주세요.');
     };
     const offerRecovery = () => {
+      this.events.emit('ad_fail',closed?'reward_pending':'show_timeout');
       this.recoverAfterReturn = () => {
-        // This is an explicit tap on the returned game, never a timer award.
-        if (rewardEarned) finishReward();
-        else this.load('광고 다시 준비 중…');
+        // A return tap is not a native dismissal event. Retire this attempt;
+        // only reward + dismissed together can complete a rewarded retry.
+        this.load('광고 다시 준비 중…');
       };
       this.emit('error', closed
         ? '광고 보상 확인이 지연됩니다. 다시 준비하거나 잠시 기다려 주세요.'
         : '광고 응답이 지연됩니다. 광고 화면을 닫고 다시 눌러 주세요.',
-      rewardEarned ? '광고 닫고 재도전' : closed ? '광고 다시 불러오기' : '광고 닫고 다시 준비');
+      closed ? '광고 다시 불러오기' : '광고 닫고 다시 준비');
     };
     this.emit('showing', '광고 재생 중…');
     operation.after(AD_SHOW_TIMEOUT_MS, () => {timedOut = true; offerRecovery();});
@@ -118,7 +125,9 @@ export class RewardedRetryAdController implements RewardedRetryAdGate {
       adGroupId: this.adGroupId,
       onEvent: event => {
         if (!operation.active) return;
+        if(event.type==='show')this.events.emit('ad_start');
         if (event.type === 'userEarnedReward') {
+          this.events.emit('ad_reward');
           rewardEarned = true;
           if (closed) finishReward();
           else if (timedOut) offerRecovery();
@@ -127,6 +136,7 @@ export class RewardedRetryAdController implements RewardedRetryAdGate {
         }
         if (event.type === 'dismissed') {
           if (closed) return;
+          this.events.emit('ad_dismissed');
           closed = true;
           if (rewardEarned) finishReward();
           else {
@@ -157,11 +167,13 @@ export class RewardedRetryAdController implements RewardedRetryAdGate {
   }
 
   private load(message = '광고 준비 중…'): void {
+    this.events.request();
     const operation = this.startOperation();
     let supported: boolean;
     try { supported = this.port.isLoadSupported(); }
-    catch { this.emit('error', '광고를 불러오지 못했습니다. 다시 눌러 주세요.'); return; }
+    catch { this.events.emit('ad_fail','sdk');this.emit('error', '광고를 불러오지 못했습니다. 다시 눌러 주세요.'); return; }
     if (!supported) {
+      this.events.emit('ad_fail','unsupported');
       this.emit('unsupported', '광고는 토스 앱의 QR 테스트에서 확인할 수 있습니다.');
       return;
     }
@@ -169,6 +181,7 @@ export class RewardedRetryAdController implements RewardedRetryAdGate {
     const fail = (failureMessage = '광고를 불러오지 못했습니다. 다시 눌러 주세요.') => {
       if (!operation.active) return;
       operation.stop();
+      this.events.emit('ad_fail','load');
       this.emit('error', failureMessage);
     };
     operation.after(AD_LOAD_TIMEOUT_MS, () => fail('광고 준비 시간이 초과됐습니다. 다시 눌러 주세요.'));
@@ -177,6 +190,7 @@ export class RewardedRetryAdController implements RewardedRetryAdGate {
       onEvent: event => {
         if (!operation.active || event.type !== 'loaded') return;
         operation.stop();
+        this.events.emit('ad_loaded');
         this.emit('ready', '광고 준비 완료');
       },
       onError: () => fail(),
@@ -197,8 +211,8 @@ export class RewardedRetryAdController implements RewardedRetryAdGate {
   }
 }
 
-export function createRewardedRetryAdGate(): RewardedRetryAdGate {
-  return new RewardedRetryAdController();
+export function createRewardedRetryAdGate(observer?:AdEventObserver): RewardedRetryAdGate {
+  return new RewardedRetryAdController(undefined,undefined,observer);
 }
 
 

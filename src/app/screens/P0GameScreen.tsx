@@ -1,3 +1,7 @@
+import {DefenseTutorial} from '../components/DefenseTutorial';
+import {resultSummary} from '../product/resultSummary';
+import {attackLabel} from '../motion/attackNames';
+import {playRuntime, type PlayRuntime, type ProductRound, type AdLease, type FullScreenKind} from '../product/playRuntime';
 import {InlineAd, Storage} from '@apps-in-toss/framework';
 import {IOScrollView} from '@granite-js/react-native';
 import {ART_SOURCES} from '../assets/artSources';
@@ -44,6 +48,7 @@ import {
 } from '../session/P0TenPunchSession';
 
 interface P0GameScreenProps {
+  readonly runtime?: PlayRuntime;
   readonly clock?: GameClock;
   readonly readyLeadInMs?: number;
   readonly seed?: number;
@@ -103,13 +108,6 @@ function soundFor(result: TenPunchSessionResult): PlaytestSoundCue {
   };
 }
 
-function attackLabel(attackId: string): string {
-  if (attackId === 'LEAD_JAB_HEAD') return '잽';
-  if (attackId === 'REAR_STRAIGHT_HEAD') return '스트레이트';
-  if (attackId === 'LEAD_UPPERCUT_HEAD') return '어퍼컷';
-  return '훅';
-}
-
 function resultDescription(result: TenPunchSessionResult): string {
   const button = result.telemetry.inputButton;
   const input = button == null ? '입력 없음' : ({LEFT:'왼쪽 회피', RIGHT:'오른쪽 회피', BACK:'뒤로 피하기', GUARD:'가드', DUCK:'숙이기', STEP_IN:'앞으로 파고들기'} as Record<string,string>)[button] ?? '알 수 없는 입력';
@@ -120,6 +118,7 @@ function resultDescription(result: TenPunchSessionResult): string {
 }
 
 export function P0GameScreen({
+  runtime = playRuntime,
   clock,
   readyLeadInMs = 2000,
   seed,
@@ -133,13 +132,30 @@ export function P0GameScreen({
   const { height } = useWindowDimensions();
   const compact = height < 700;
   const [roundClock] = useState(() => new RoundClock(clock ?? createCanonicalGameClock()));
-  const [rewardedRetryAd] = useState(() => retryAdGate ?? createRewardedRetryAdGate());
+  const [rewardedRetryAd] = useState(() => retryAdGate ?? createRewardedRetryAdGate((name,data)=>runtime.track(name,{...data,roundId:productRoundRef.current?.id??null})));
   const [retryAdState, setRetryAdState] = useState<RewardedRetryAdState>({phase: 'idle', message: ''});
-  // This belongs to the play session, not to the result screen: returning
-  // home or selecting a different difficulty must not grant another life.
-  const retryRequiredRef = useRef(false);
-  const [retryRequired, setRetryRequired] = useState(false);
-  const [stageInterstitialAd] = useState(() => stageAdGate ?? createStageInterstitialAdGate());
+  const [, updateRuntime] = useState(0);
+  const retryRequired = runtime.requiresReward;
+  const productRoundRef = useRef<ProductRound | undefined>(undefined);
+  const ownerRef = useRef({});
+  const adLeaseRef = useRef<AdLease | null>(null);
+  const mountedRef = useRef(true);
+  const pendingBeginRef = useRef<(() => void) | null>(null);
+  const [adResetVersion,setAdResetVersion]=useState(0);
+  const [waitingForForeground, setWaitingForForeground] = useState(false);
+  const retryPhaseRef = useRef<RewardedRetryAdState['phase']>('idle');
+  const stagePhaseRef = useRef<StageInterstitialAdState['phase']>('idle');
+  useEffect(() => runtime.subscribe(() => updateRuntime(value => value + 1)), [runtime]);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      pendingBeginRef.current = null;
+      if (adLeaseRef.current) runtime.releaseAd(adLeaseRef.current);
+      adLeaseRef.current = null;
+    };
+  }, [runtime]);
+  const [stageInterstitialAd] = useState(() => stageAdGate ?? createStageInterstitialAdGate((name,data)=>runtime.track(name,{...data,roundId:productRoundRef.current?.id??null})));
   const [stageAdState, setStageAdState] = useState<StageInterstitialAdState>({phase: 'idle'});
   const clockRef = useRef(roundClock);
   const startedRef = useRef(false);
@@ -157,10 +173,12 @@ export function P0GameScreen({
   const storageWritableRef=useRef(false);
   const [loaded,setLoaded]=useState(false);
   const [storageNote,setStorageNote]=useState('');
+  const [detailsOpen,setDetailsOpen]=useState(false);
   const [previousBest,setPreviousBest]=useState<RoundRecord>();
   const [rankNote,setRankNote]=useState('');
   const [connecting,setConnecting]=useState(false);
   const connectingRef=useRef(false);
+  const [tutorialLevel,setTutorialLevel]=useState<Level | null>(null);
   const [recordsOpen,setRecordsOpen]=useState(false);
   const [recordsNote,setRecordsNote]=useState('');
   const requestVersion=useRef(0);
@@ -214,19 +232,31 @@ export function P0GameScreen({
     snapshot.nowMs - latestResult.telemetry.impactScheduledAtMs >= 280;
   resultsReadyRef.current = showResults;
   useEffect(() => {
-    if (snapshot.knockedOut) {
-      retryRequiredRef.current = true;
-      setRetryRequired(true);
+    if (started && snapshot.sessionCompleted && productRoundRef.current) {
+      runtime.endRound(productRoundRef.current, snapshot.knockedOut ? 'knockout' : 'clear');
     }
-  }, [snapshot.runId, snapshot.knockedOut]);
+  }, [runtime, started, snapshot.sessionCompleted, snapshot.knockedOut]);
   useEffect(() => {
     if (skipStartupAdLoad) return;
-    return stageInterstitialAd.prepare(setStageAdState);
-  }, [stageInterstitialAd, skipStartupAdLoad]);
+    return stageInterstitialAd.prepare(state => {
+      stagePhaseRef.current = state.phase;
+      setStageAdState(state);
+    });
+  }, [stageInterstitialAd, skipStartupAdLoad, adResetVersion]);
   useEffect(() => {
-    if (!showResults && !retryRequired) return;
-    return rewardedRetryAd.prepare(setRetryAdState);
-  }, [showResults || retryRequired, rewardedRetryAd]);
+    if (!retryRequired) return;
+    return rewardedRetryAd.prepare(state => {
+      retryPhaseRef.current = state.phase;
+      setRetryAdState(state);
+    });
+  }, [retryRequired, rewardedRetryAd, adResetVersion]);
+  useEffect(() => {
+    if (!foreground || !pendingBeginRef.current) return;
+    const beginPending = pendingBeginRef.current;
+    pendingBeginRef.current = null;
+    setWaitingForForeground(false);
+    beginPending();
+  }, [foreground]);
 
   const pauseRound = useCallback(() => {
     if (!startedRef.current || pausedRef.current || resultsReadyRef.current) return;
@@ -260,12 +290,12 @@ export function P0GameScreen({
     return () => { subscription.remove(); blur.remove(); focus.remove(); };
   }, [pauseRound]);
 
-  const begin = (selected: Level, roundSeed = seed, challenge?: Challenge) => {
-    if (retryRequiredRef.current) return;
+  const begin = (selected: Level, roundSeed = seed, challenge?: Challenge, source = 'landing') => {
+    if (runtime.requiresReward || runtime.fullScreenBusy || !foregroundRef.current) return;
     if ((!loaded || connecting) && !challenge) return;
     if (startedRef.current && !sessionRef.current.snapshot().sessionCompleted) return;
     if(!challenge && selected>progress.unlocked)return;
-    requestVersion.current++;setRecordsOpen(false);
+    requestVersion.current++;setRecordsOpen(false);setDetailsOpen(false);
     const rate=LEVELS[selected].rate;
     startedRef.current=true; pausedRef.current=false; resultsReadyRef.current=false;
     challengeRef.current=challenge; inputsRef.current=[]; savedRound.current=undefined;
@@ -274,13 +304,11 @@ export function P0GameScreen({
     clockRef.current.start(rate);setSpeed(rate);setLevel(selected);
     sessionRef.current=new P0TenPunchSession(clockRef.current,getSurvivalMotionSourceIds(),{ruleset:'candidate',maxHits:5,survivalLevel:selected,...(roundSeed==null?{}:{seed:roundSeed})});
     sessionRef.current.start({leadInMs:challenge?.leadInMs??readyLeadInMs*rate});
-    // Ad callbacks may arrive before the host becomes active again. Freeze
-    // the new round until the player returns and explicitly continues.
-    if(!foregroundRef.current){clockRef.current.pause();pausedRef.current=true;setPaused(true);}
+    productRoundRef.current = runtime.startRound({level:selected,source});
     setStarted(true);setSnapshot(sessionRef.current.tick());
   };
   const beginDaily=async()=>{
-    if(retryRequiredRef.current){
+    if(runtime.requiresReward){
       afterRetryReward(()=>{void beginDaily();});
       return;
     }
@@ -316,38 +344,71 @@ export function P0GameScreen({
     setSnapshot(sessionRef.current.snapshot());
   };
 
-  const handleRetry = (retrySeed?: number) => {
+  const handleRetry = (retrySeed?: number, source = 'free_retry') => {
     if(!sessionRef.current.snapshot().sessionCompleted)return;
     if(challengeRef.current){void beginDaily();return;}
-    begin(level,retrySeed??snapshot.seed);
+    begin(level,retrySeed??snapshot.seed,undefined,source);
   };
-  const afterRetryReward = (onRewarded: () => void) => {
-    if(stageAdState.phase==='showing')return;
-    rewardedRetryAd.attempt(() => {
-      retryRequiredRef.current=false;
-      setRetryRequired(false);
-      onRewarded();
-    });
+  const runFullScreenAd = (kind: FullScreenKind, onComplete: () => void) => {
+    if (!mountedRef.current || pendingBeginRef.current || !foregroundRef.current) return;
+    const phase = kind === 'rewarded' ? retryPhaseRef.current : stagePhaseRef.current;
+    const previous = adLeaseRef.current;
+    if (previous) {
+      // An explicit recovery tap retires the old action. Its callbacks cannot start a game.
+      if (previous.kind !== kind || phase !== 'error') return;
+      runtime.releaseAd(previous);
+      adLeaseRef.current = null;
+    }
+    const lease = runtime.acquireAd(ownerRef.current, kind);
+    if (!lease) return;
+    adLeaseRef.current = lease;
+    const complete = () => {
+      if (!mountedRef.current || adLeaseRef.current !== lease) return;
+      const accepted = kind === 'rewarded' ? runtime.completeReward(lease) : runtime.releaseAd(lease);
+      if (!accepted) return;
+      adLeaseRef.current = null;
+      if (foregroundRef.current) onComplete();
+      else {
+        pendingBeginRef.current = onComplete;
+        setWaitingForForeground(true);
+      }
+    };
+    const attempted = kind === 'rewarded'
+      ? rewardedRetryAd.attempt(complete)
+      : stageInterstitialAd.attempt(complete);
+    if (!attempted && adLeaseRef.current === lease) {
+      runtime.releaseAd(lease);
+      adLeaseRef.current = null;
+    }
   };
+  const afterRetryReward = (onRewarded: () => void) => runFullScreenAd('rewarded', onRewarded);
   const requestBegin = (selected: Level) => {
-    if(retryRequiredRef.current)afterRetryReward(()=>begin(selected));
+    if(runtime.requiresReward){const retry=runtime.prepareRetry('ad_retry');runtime.track('ad_retry_tap',{roundId:retry?.previousRoundId??null,level:selected});afterRetryReward(()=>begin(selected,seed,undefined,'ad_retry'));}
+    else if(!runtime.tutorialCompleted && Object.keys(progressRef.current.best).length===0)setTutorialLevel(selected);
     else begin(selected);
   };
   const handleNextLevel = () => {
-    if (level >= 3 || progress.unlocked <= level || stageAdState.phase === 'showing' || retryAdState.phase === 'showing') return;
+    if (!sessionRef.current.snapshot().sessionCompleted || level >= 3 || progress.unlocked <= level) return;
     const nextLevel = (level + 1) as Level;
-    if(retryRequiredRef.current){requestBegin(nextLevel);return;}
-    stageInterstitialAd.attempt(() => begin(nextLevel));
+    if(snapshot.knockedOut){requestBegin(nextLevel);return;}
+    runFullScreenAd('interstitial', () => begin(nextLevel,seed,undefined,'next_level'));
   };
   const handleRewardedRetry = (retrySeed?: number) => {
-    if(!sessionRef.current.snapshot().sessionCompleted)return;
-    afterRetryReward(() => handleRetry(retrySeed));
+    if(!sessionRef.current.snapshot().sessionCompleted || pendingBeginRef.current)return;
+    if(runtime.fullScreenBusy && adLeaseRef.current?.kind!=='rewarded')return;
+    if(runtime.requiresReward){const retry=runtime.prepareRetry('ad_retry');runtime.track('ad_retry_tap',{roundId:retry?.previousRoundId??null,level});afterRetryReward(() => handleRetry(retrySeed,'ad_retry'));}
+    else {const retry=runtime.prepareRetry('free_retry');runtime.track('free_retry_tap',{roundId:retry?.previousRoundId??null,level});handleRetry(retrySeed);}
   };
-  const retryAdPressable = retryAdState.phase === 'ready' || retryAdState.phase === 'error';
-  const retryAdLabel = retryAdState.phase === 'ready' ? '재도전' : retryAdState.phase === 'error' ? retryAdState.actionLabel ?? '광고 다시 불러오기' : retryAdState.phase === 'showing' ? '광고 재생 중…' : retryAdState.phase === 'unsupported' ? 'QR에서 광고 테스트' : '광고 준비 중…';
+  const retryAdPressable = !waitingForForeground && stageAdState.phase !== 'showing' &&
+    (!retryRequired || retryAdState.phase === 'ready' || retryAdState.phase === 'error');
+  const retryAdLabel = !retryRequired ? '다시 도전' : retryAdState.phase === 'ready' ? '광고 보고 다시 도전' : retryAdState.phase === 'error' ? retryAdState.actionLabel ?? '광고 다시 불러오기' : retryAdState.phase === 'showing' ? '광고 재생 중…' : retryAdState.phase === 'unsupported' ? 'QR에서 광고 테스트' : '광고 준비 중…';
+  useEffect(()=>{if(loaded&&!started&&!recordsOpen&&tutorialLevel===null)runtime.track('landing_view');},[runtime,loaded,started,recordsOpen,tutorialLevel]);
+  useEffect(()=>{if(tutorialLevel!==null)runtime.track('tutorial_start');},[runtime,tutorialLevel]);
   const roundRecord=useMemo(()=>summarizeRound(snapshot,level,speed),[snapshot,level,speed]);
+  const summary = resultSummary(roundRecord, snapshot.results);
   useEffect(()=>{
     if(!showResults||savedRound.current===snapshot.runId)return;
+    runtime.track('result_view',{roundId:productRoundRef.current?.id??null,level});
     savedRound.current=snapshot.runId;const base=progressRef.current;setPreviousBest(base.best[level]);
     const next=recordRound(base,roundRecord);progressRef.current=next;setProgress(next);
     if(loaded&&storageWritableRef.current)void enqueueProgressWrite(JSON.stringify(next)).catch(()=>setStorageNote('기록 저장 실패 · 이번 실행에서는 유지됩니다.'));
@@ -422,7 +483,7 @@ export function P0GameScreen({
               : frame.feedback}
           </Text>
         ) : null}
-        {!started && !recordsOpen ? (
+        {!started && !recordsOpen && tutorialLevel===null ? (
           <View style={styles.introCard}>
           <ScrollView contentContainerStyle={[styles.introContent, compact && styles.introCompact]}>
             <CoachReaction reaction={COACH_INTRO} />
@@ -445,6 +506,7 @@ export function P0GameScreen({
             <Text style={styles.smallPrint}>{rankNote||storageNote||'30회를 버티면 다음 단계 해금'}</Text>
           </View></View>
         ) : null}
+        {tutorialLevel!==null ? <DefenseTutorial active={foreground} onComplete={()=>{runtime.completeTutorial();const selected=tutorialLevel;setTutorialLevel(null);begin(selected);}}/> : null}
         {recordsOpen ? <View style={styles.introCard} accessibilityViewIsModal>
           <IOScrollView contentContainerStyle={styles.introContent}>
             <Text accessibilityRole="header" style={styles.introTitle}>내 기록</Text>
@@ -469,11 +531,14 @@ export function P0GameScreen({
           <View style={styles.resultCard}>
             <ScrollView style={styles.resultList} contentContainerStyle={styles.resultContent}>
             <Text accessibilityRole="header" accessibilityLiveRegion="polite" style={styles.resultHeading}>{snapshot.knockedOut ? `다운 · ${roundRecord.survived} / 30 생존` : `클리어 · 목숨 ${roundRecord.lives}개`}</Text>
-            <CoachReaction compact={compact} reaction={rematch.reaction} />
+            <Text style={styles.rematchTitle}>{summary.goal}</Text>
+            {summary.strength ? <Text style={styles.rematchBody}>{summary.strength}</Text> : null}
+            {summary.weakness ? <Text style={styles.rematchBody}>{summary.weakness}</Text> : null}
+            <CoachReaction compact={compact} reaction={{...rematch.reaction, note:snapshot.knockedOut ? `${rematch.focusTitle}. ${rematch.focusBody}` : rematch.reaction.note}} />
             <View style={styles.recordCard}>
-              <Text style={styles.rematchTitle}>{!previousBest||compareRecords(roundRecord,previousBest)<0?'개인 최고 기록!':recordText(previousBest)}</Text>
+              <Text style={styles.rematchTitle}>{!previousBest?'첫 기록을 남겼어요':compareRecords(roundRecord,previousBest)<0?'새로운 최고 기록!':recordText(previousBest)}</Text>
               <Text style={styles.rematchBody}>완벽 회피 {roundRecord.perfect}/30 · 최장 연속 {roundRecord.streak}회{isHighScore(roundRecord)?' · 관장의 인정 달성!':''}</Text>
-              <Text style={styles.rematchBody}>{earnsPromotion(roundRecord)?level<3?LEVELS[(level+1) as Level].name+' 단계 해금!':'최고 단계 클리어!':'다음 목표: 목숨을 남기고 30회 버티기'}</Text>
+              <Text style={styles.rematchBody}>{earnsPromotion(roundRecord)?level<3?LEVELS[(level+1) as Level].name+' 단계 해금!':'최고 단계 클리어!':'같은 공격 순서로 다시 연습할 수 있어요'}</Text>
               <Text style={styles.smallPrint}>{rankNote||storageNote||'난이도별 최고 기록은 이 기기에 저장됩니다.'}</Text>
             </View>
             <View testID="rematch-focus" style={styles.rematchFocus}>
@@ -485,7 +550,8 @@ export function P0GameScreen({
               <Text testID="summary-safe" style={styles.textSafe}>안전 방어 {counts.SAFE}</Text>
               <Text testID="summary-hit" style={styles.textHit}>피격 {counts.HIT}</Text>
             </View>
-              {snapshot.results.map((result) => (
+              <Pressable accessibilityRole="button" accessibilityLabel={detailsOpen ? '상세 기록 접기' : '상세 기록 보기'} accessibilityState={{expanded:detailsOpen}} onPress={() => setDetailsOpen(value => !value)} style={styles.replayButton}><Text style={styles.replayText}>{detailsOpen ? '상세 기록 접기' : '상세 기록 보기'}</Text></Pressable>
+              {detailsOpen && snapshot.results.map((result) => (
                 <View key={result.attackInstanceId} testID={`result-${result.attackIndex}`} style={styles.resultRow}>
                   <Text style={[styles.resultAttack, result.outcome === 'PERFECT' ? styles.textPerfect : result.outcome === 'SAFE' ? styles.textSafe : styles.textHit]}>#{result.attackIndex + 1} {attackLabel(result.attackId)}</Text>
                   <Text style={styles.resultDetail}>
@@ -494,11 +560,11 @@ export function P0GameScreen({
                 </View>
               ))}
             </ScrollView>
-            {!challengeRef.current && level<3 && progress.unlocked>level ? <Pressable accessibilityRole="button" accessibilityLabel="다음 난이도 도전" disabled={stageAdState.phase === 'showing'} style={[styles.beginButton,stageAdState.phase === 'showing'&&{opacity:.55}]} onPress={handleNextLevel}><Text style={styles.beginText}>{stageAdState.phase === 'showing'?'광고 재생 중…':`다음 난이도 도전 · ${LEVELS[(level+1) as Level].name}`}</Text></Pressable>:null}
+            {!challengeRef.current && level<3 && progress.unlocked>level ? <Pressable accessibilityRole="button" accessibilityLabel={retryRequired ? "광고 보고 다음 난이도 도전" : "다음 난이도 도전"} disabled={waitingForForeground || stageAdState.phase === 'showing' || (retryRequired && !retryAdPressable)} style={[styles.beginButton,stageAdState.phase === 'showing'&&{opacity:.55}]} onPress={handleNextLevel}><Text style={styles.beginText}>{stageAdState.phase === 'showing'?'광고 재생 중…':`${retryRequired ? "광고 보고 " : ""}다음 난이도 도전 · ${LEVELS[(level+1) as Level].name}`}</Text></Pressable>:null}
             {stageAdState.message && !challengeRef.current && level<3 && progress.unlocked>level ? <Text accessibilityLiveRegion="polite" style={styles.smallPrint}>{stageAdState.message}</Text> : null}
             <Pressable
-              accessibilityLabel={retryAdState.phase === 'ready' ? '재도전' : retryAdLabel}
-              accessibilityHint="광고 시청 후 다시 도전할 수 있어요."
+              accessibilityLabel={retryAdLabel}
+              accessibilityHint={retryRequired ? "광고 시청 후 다시 도전할 수 있어요." : undefined}
               accessibilityRole="button"
               disabled={!retryAdPressable}
               onPress={() => handleRewardedRetry(rematch.replaySameSeed ? snapshot.seed : (snapshot.seed + 1) >>> 0)}
@@ -507,10 +573,15 @@ export function P0GameScreen({
               <Text style={styles.retryText}>{retryAdLabel}</Text>
               <Text style={styles.rematchNote}>{challengeRef.current ? '오늘의 같은 코스에 다시 도전합니다.' : rematch.retryNote}</Text>
             </Pressable>
-            <Text style={styles.adDisclosure}>광고 시청 후 다시 도전할 수 있어요.</Text>
-            <Text accessibilityLiveRegion="polite" style={styles.smallPrint}>{retryAdState.message}</Text>
-            <View style={{flexDirection:'row',gap:8}}>{!challengeRef.current ? <Pressable accessibilityLabel="광고 보고 다른 패턴 도전" accessibilityRole="button" disabled={!retryAdPressable} style={[styles.replayButton,{flex:1},!retryAdPressable&&{opacity:0.55}]} onPress={() => handleRewardedRetry((snapshot.seed + 1) >>> 0)}><Text style={styles.replayText}>광고 보고 다른 패턴</Text></Pressable>:null}
-            <Pressable accessibilityLabel="난이도 선택" accessibilityRole="button" disabled={retryAdState.phase==='showing'||stageAdState.phase==='showing'} style={[styles.replayButton,{flex:1}]} onPress={() => {
+            {retryRequired ? <><Text style={styles.adDisclosure}>광고 시청 후 다시 도전할 수 있어요.</Text><Text accessibilityLiveRegion="polite" style={styles.smallPrint}>{retryAdState.message}</Text></> : null}
+            {waitingForForeground ? <Text accessibilityLiveRegion="polite" style={styles.smallPrint}>돌아오면 준비 후 바로 시작합니다.</Text> : null}
+            <View style={{flexDirection:'row',gap:8}}>{!challengeRef.current ? <Pressable accessibilityLabel={retryRequired ? "광고 보고 다른 패턴 도전" : "다른 패턴 도전"} accessibilityRole="button" disabled={!retryAdPressable} style={[styles.replayButton,{flex:1},!retryAdPressable&&{opacity:0.55}]} onPress={() => handleRewardedRetry((snapshot.seed + 1) >>> 0)}><Text style={styles.replayText}>{retryRequired ? "광고 보고 다른 패턴" : "다른 패턴"}</Text></Pressable>:null}
+            <Pressable accessibilityLabel="난이도 선택" accessibilityRole="button" disabled={waitingForForeground||retryAdState.phase==='showing'||stageAdState.phase==='showing'} style={[styles.replayButton,{flex:1}]} onPress={() => {
+              if(adLeaseRef.current){
+                (adLeaseRef.current.kind==='rewarded'?rewardedRetryAd:stageInterstitialAd).dispose();
+                runtime.releaseAd(adLeaseRef.current);adLeaseRef.current=null;setAdResetVersion(value=>value+1);
+              }
+              runtime.cancelRetry();
               requestVersion.current++;clockRef.current.pause(); startedRef.current=false; pausedRef.current=false; resultsReadyRef.current=false; setStarted(false); setPaused(false); acceptedAt.current.clear(); setNotice(null);
               challengeRef.current=undefined;setRankNote('');setLevel(Math.min(level,progress.unlocked) as Level);
               sessionRef.current = new P0TenPunchSession(clockRef.current, getSurvivalMotionSourceIds(), {seed:snapshot.seed, ruleset:'candidate', maxHits:5,survivalLevel:level});

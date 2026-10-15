@@ -1,8 +1,8 @@
-import { chromium } from 'file:///C:/Users/cj799/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
+import { chromium } from './qa-runtime.mjs';
 import { writeFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import { P0_ATTACKS } from '../../.preview-dist/game/config/p0Attacks.js';
-const browser=await chromium.launch({channel:'msedge',headless:true});
+const browser=await chromium.launch({headless:true});
 const errors=[],report={strategies:{},errors};
 try {
  const page=await browser.newPage({viewport:{width:390,height:844}});page.on('pageerror',e=>errors.push(e.message));

@@ -1,3 +1,26 @@
+import {PlayRuntime} from '/.preview-dist/app/product/playRuntime.js';
+import {resultSummary} from '/.preview-dist/app/product/resultSummary.js';
+import {attackLabel} from '/.preview-dist/app/motion/attackNames.js';
+const productRuntime=new PlayRuntime();
+let productRound=null,qaAds=null,retryPhase='idle',pendingAdStart=null,adLease=null;
+const qaAdMode=new URLSearchParams(location.search).get('qaAds')==='1';
+if(qaAdMode){const {createQaAds}=await import('/qa-product.js');qaAds=createQaAds((name,data)=>productRuntime.track(name,{...data,roundId:productRound?.id??null}));}
+function adThen(kind,run){
+ if(adLease||pendingAdStart)return;
+ if(!qaAds){if(kind==='interstitial')run();else byId('retry-note').textContent='실제 광고는 토스 QR에서 확인하세요. 모의 검증은 qaAds=1입니다.';return;}
+ const lease=productRuntime.acquireAd({},kind);if(!lease)return;adLease=lease;
+ const complete=()=>{if(adLease!==lease)return;kind==='rewarded'?productRuntime.completeReward(lease):productRuntime.releaseAd(lease);adLease=null;if(document.hidden)pendingAdStart=run;else run();};
+ const attempted=(kind==='rewarded'?qaAds.rewarded:qaAds.stage).attempt(complete);
+ if(!attempted&&adLease===lease){productRuntime.releaseAd(lease);adLease=null;}
+}
+function requestPlay(seed,rate,source='free_retry'){
+ if(productRuntime.fullScreenBusy||pendingAdStart)return;
+ const required=productRuntime.requiresReward;
+ const retry=required||source==='free_retry'?productRuntime.prepareRetry(required?'ad_retry':'free_retry'):null;
+ productRuntime.track(required?'ad_retry_tap':'free_retry_tap',{roundId:retry?.previousRoundId??null});
+ if(required)adThen('rewarded',()=>start(seed,rate,null,'ad_retry'));
+ else start(seed,rate,null,source);
+}
 import { LEVELS } from '/.preview-dist/app/session/survivalRules.js';
 import { emptyProgress, parseProgress, recordRound, summarizeRound, recordText, compareRecords, earnsPromotion, isHighScore } from '/.preview-dist/app/session/progression.js';
 import { startChallenge, submitChallenge, standingText, readCompetition, overviewText } from '/.preview-dist/app/session/competitionClient.js';
@@ -158,17 +181,20 @@ function handleInput(input) {
 
 function showResults(snapshot) {
   const totals = { PERFECT: 0, SAFE: 0, HIT: 0 };
-  const labels = { LEAD_JAB_HEAD: '잽', REAR_STRAIGHT_HEAD: '스트레이트', LEAD_HOOK_HEAD: '훅', LEAD_UPPERCUT_HEAD: '어퍼컷' };
+  productRuntime.endRound(productRound,snapshot.knockedOut?'knockout':'clear');
+  productRuntime.track('result_view',{roundId:productRound.id});
+  if(productRuntime.requiresReward&&qaAds)qaAds.rewarded.prepare(state=>{retryPhase=state.phase;if(state.phase==='error'&&adLease){productRuntime.releaseAd(adLease);adLease=null;}byId('retry-label').textContent=state.phase==='ready'?'광고 보고 다시 도전':state.phase==='error'?'광고 다시 불러오기':'광고 준비 중…';});
   for (const result of snapshot.results) totals[result.outcome]++;
   for (const outcome of Object.keys(totals)) byId(`summary-${outcome.toLowerCase()}`).textContent = `${({PERFECT:'완벽 회피',SAFE:'안전 방어',HIT:'피격'})[outcome]} ${totals[outcome]}`;
   const record=summarizeRound(snapshot,level,speed),old=progress.best[level];
+  const summary=resultSummary(record,snapshot.results);byId('nearby-goal').textContent=summary.goal;byId('result-strength').textContent=summary.strength??'';byId('result-weakness').textContent=summary.weakness??'';byId('result-details').open=false;
   progress=recordRound(progress,record);
   try{localStorage.setItem(STORAGE_KEY,JSON.stringify(progress));}catch{storageNote='기록 저장 실패 · 이번 실행에서는 유지됩니다.';}
   byId('result-title').textContent=snapshot.knockedOut?'다운 · '+record.survived+' / 30 생존':'클리어 · 목숨 '+record.lives+'개';
-  byId('record-title').textContent=!old||compareRecords(record,old)<0?'개인 최고 기록!':recordText(old);
+  byId('record-title').textContent=!old?'첫 기록을 남겼어요':compareRecords(record,old)<0?'새로운 최고 기록!':recordText(old);
   byId('record-detail').textContent='완벽 회피 '+record.perfect+'/30 · 최장 연속 '+record.streak+'회';
   if(isHighScore(record))byId('record-detail').textContent+=' · 관장의 인정 달성!';
-  byId('promotion-note').textContent=earnsPromotion(record)?level<3?LEVELS[level+1].name+' 단계 해금!':'최고 단계 클리어!':'다음 목표: 목숨을 남기고 30회 버티기';
+  byId('promotion-note').textContent=earnsPromotion(record)?level<3?LEVELS[level+1].name+' 단계 해금!':'최고 단계 클리어!':'같은 공격 순서로 다시 연습할 수 있어요';
   byId('promote-button').hidden=level===3||progress.unlocked<=level||!!challenge;
   byId('promote-button').textContent=level<3?'다음 난이도 도전 · '+LEVELS[level+1].name:'';
   byId('rank-note').textContent=challenge?'기록 검증 중…':storageNote||'난이도별 최고 기록은 이 브라우저에 저장됩니다.';
@@ -180,13 +206,13 @@ function showResults(snapshot) {
   renderCoach('coach-result', rematch.reaction);
   byId('rematch-title').textContent = rematch.focusTitle;
   byId('rematch-body').textContent = rematch.focusBody;
-  byId('retry-label').textContent = '다시 도전';
+  byId('retry-label').textContent = productRuntime.requiresReward?'광고 보고 다시 도전':'다시 도전';
   byId('new-pattern-button').hidden=!!challenge;
   byId('retry-note').textContent = challenge ? '오늘의 같은 코스에 다시 도전합니다.' : rematch.retryNote;
   byId('result-list').replaceChildren(...snapshot.results.map(result => {
     const row = document.createElement('div'); row.className = 'result-row';
     const attack = document.createElement('div'); attack.className = 'result-attack';
-    attack.textContent = `#${result.attackIndex + 1} ${labels[result.attackId]}`;
+    attack.textContent = `#${result.attackIndex + 1} ${attackLabel(result.attackId)}`;
     const detail = document.createElement('div'); detail.className = 'result-detail';
     const input = {LEFT:'왼쪽 회피',RIGHT:'오른쪽 회피',BACK:'뒤로 피하기',GUARD:'가드',DUCK:'숙이기',STEP_IN:'앞으로 파고들기'}[result.telemetry.inputButton] ?? '입력 없음';
     const reason = result.outcome !== 'HIT' ? result.outcome === 'PERFECT' ? '완벽하게 피함' : '안전하게 방어' :
@@ -207,7 +233,8 @@ function showResults(snapshot) {
   focusButton('retry-button');
 }
 
-function start(seed, selectedSpeed = LEVELS[level].rate, daily = null) {
+function start(seed, selectedSpeed = LEVELS[level].rate, daily = null, source='landing') {
+  if(productRuntime.requiresReward||productRuntime.fullScreenBusy||document.hidden)return;
   if (!ready || (connecting && !daily) || (started && !session.snapshot().sessionCompleted)) return;
   requestVersion++;byId('records-card').hidden=true;
   if(!daily && level>progress.unlocked)return;
@@ -225,6 +252,7 @@ function start(seed, selectedSpeed = LEVELS[level].rate, daily = null) {
   document.querySelector('.controls').hidden = false;
   buttons.forEach(button => { button.hidden = ['DUCK','STEP_IN'].includes(button.dataset.btn) && level !== 3; button.disabled = button.hidden; button.classList.remove('pressed'); });
   session.start({ leadInMs: daily?.leadInMs ?? (returning ? 800 : 2000) * speed });
+  productRound=productRuntime.startRound({level,source});
   focusButton('pause-button'); requestFrame();
 }
 
@@ -254,30 +282,33 @@ byId('sound-button').addEventListener('click', () => {
   byId('sound-button').textContent = soundEnabled ? '소리 켜짐' : '소리 꺼짐';
   byId('sound-button').setAttribute('aria-label', soundEnabled ? '소리 끄기' : '소리 켜기');
 });
-addEventListener('visibilitychange', () => { if (document.hidden) pauseRound(); });
+addEventListener('visibilitychange', () => { if (document.hidden) pauseRound();else if(pendingAdStart){const run=pendingAdStart;pendingAdStart=null;run();} });
 addEventListener('blur', pauseRound);
-byId('begin-button').addEventListener('click', () => {if(ready)start(session.snapshot().seed, LEVELS[level].rate);});
+byId('begin-button').addEventListener('click', () => {if(ready)requestPlay(session.snapshot().seed, LEVELS[level].rate,'landing');});
 byId('daily-button').addEventListener('click',()=>void openRecords());
 byId('daily-start-button').addEventListener('click',()=>void beginDaily());
 byId('records-close-button').addEventListener('click',closeRecords);
 byId('records-card').addEventListener('keydown',event=>{if(event.key==='Escape')closeRecords();if(event.key==='Tab'){const enabled=[byId('daily-start-button'),byId('records-close-button')].filter(b=>!b.disabled);event.preventDefault();enabled[(enabled.indexOf(document.activeElement)+(event.shiftKey?-1:1)+enabled.length)%enabled.length].focus();}});
-byId('promote-button').addEventListener('click',()=>{if(level<3 && progress.unlocked>level){level++;start((session.snapshot().seed+1)>>>0,LEVELS[level].rate);}});
+byId('promote-button').addEventListener('click',()=>{if(level<3 && progress.unlocked>level){const run=()=>{level++;start((session.snapshot().seed+1)>>>0,LEVELS[level].rate,null,'next_level');};if(session.snapshot().knockedOut){if(productRuntime.requiresReward)adThen('rewarded',run);else run();}else adThen('interstitial',run);}});
 byId('mode-button').addEventListener('click', () => {
+  if(productRuntime.fullScreenBusy||pendingAdStart)return;
+  productRuntime.cancelRetry();
   requestVersion++;challenge=null;inputs=[];level=Math.min(level,progress.unlocked);renderLevels();
   clock.pause(); started = false; paused = false; showingResults = false; playedResults = 0; acceptedAt.clear();
   session = new PreviewTenPunchSession(clock, Object.fromEntries(Object.entries(assets).map(([id, asset]) => [id, asset.source.id])), {seed:session.snapshot().seed,maxHits:5,survivalLevel:level});
   byId('result-card').classList.remove('visible'); byId('intro-card').hidden=false; byId('pause-button').hidden=true;
   document.querySelector('.controls').hidden=true; stopAudio(); focusButton('begin-button'); requestFrame();
 });
-byId('retry-button').addEventListener('click', () => { if(challenge){void beginDaily();return;} const snapshot = session.snapshot(); start(getRematchReview(snapshot.results, speed, true).replaySameSeed ? snapshot.seed : (snapshot.seed + 1) >>> 0); });
-byId('new-pattern-button').addEventListener('click', () => {if(challenge){challenge=null;level=Math.min(level,progress.unlocked);}start((session.snapshot().seed + 1) >>> 0,LEVELS[level].rate);});
-byId('replay-seed-button').addEventListener('click', () => start(session.snapshot().seed));
+byId('retry-button').addEventListener('click', () => { if(challenge){void beginDaily();return;} const snapshot = session.snapshot(); requestPlay(getRematchReview(snapshot.results, speed, true).replaySameSeed ? snapshot.seed : (snapshot.seed + 1) >>> 0); });
+byId('new-pattern-button').addEventListener('click', () => {if(challenge){challenge=null;level=Math.min(level,progress.unlocked);}requestPlay((session.snapshot().seed + 1) >>> 0,LEVELS[level].rate);});
+byId('replay-seed-button').addEventListener('click', () => requestPlay(session.snapshot().seed));
 byId('start-seed-button').addEventListener('click', () => {
   const seed = Number(byId('seed-input').value);
   if (Number.isInteger(seed) && seed >= 0) start(seed);
 });
 
 async function init() {
+  if(qaAds)qaAds.stage.prepare(()=>{});
   renderLevels();renderCoach('coach-intro', COACH_INTRO);
   for (const file of ['lead-jab.json', 'rear-straight.json', 'lead-hook.json']) {
     const response = await fetch(`/src/game/assets/motion/${file}`);
@@ -292,7 +323,7 @@ async function init() {
   ready=true;byId('begin-button').disabled=false;byId('daily-button').disabled=false;
   byId('seed-input').value = String(session.snapshot().seed);
   requestFrame();
-  if (debug) window.__p0Preview = { snapshot: () => session.snapshot(), handleInput, retrySameSeed: () => start(session.snapshot().seed), startSeed: start };
+  if (debug) window.__p0Preview = { runtime:productRuntime, snapshot: () => session.snapshot(), handleInput, retrySameSeed: () => requestPlay(session.snapshot().seed), startSeed: start };
 }
 function tick() {
     frameId = null;

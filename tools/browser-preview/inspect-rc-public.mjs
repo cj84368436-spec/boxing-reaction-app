@@ -1,10 +1,10 @@
-import { chromium } from 'file:///C:/Users/cj799/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
+import { chromium } from './qa-runtime.mjs';
 import { P0TenPunchSession } from '../../.preview-dist/app/session/P0TenPunchSession.js';
 import { P0_ATTACKS } from '../../.preview-dist/game/config/p0Attacks.js';
 import { writeFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 const ids={LEAD_JAB_HEAD:'144_13',REAR_STRAIGHT_HEAD:'144_20',LEAD_HOOK_HEAD:'14_01'};
-const browser=await chromium.launch({channel:'msedge',headless:true});
+const browser=await chromium.launch({headless:true});
 try{const page=await browser.newPage();await page.clock.install();await page.clock.pauseAt(new Date());
 for(const width of [320,390]){
  await page.setViewportSize({width,height:width===320?568:844});await page.goto('http://127.0.0.1:3001/?seed=123');await page.locator('#fast-button').click();

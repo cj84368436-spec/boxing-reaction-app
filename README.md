@@ -1,5 +1,16 @@
 # 복싱앱 스타터 패키지
 
+현재는 Apps in Toss / React Native 복싱 생존 미니게임입니다. 30회 공격·목숨 5개·3단계 난이도·개인 기록·광고가 구현되어 있습니다. 아래 P0 설명은 초기 기준 엔진의 역사적 설명입니다.
+
+- 최신 제품 정책: [PRODUCT_DECISIONS](docs/PRODUCT_DECISIONS.md)
+- 최신 구현·검증: [2026-10-15 구현 보고서](docs/IMPLEMENTATION_2026-10-15.md)
+- 2 knockout마다 rewarded 광고 1회. 첫 KO와 clear 같은 난이도 재도전은 무료. 카운터는 현재 runtime에서만 유지합니다.
+- 설치 `npm ci`, 전체 테스트 `npm test`, 타입 `npm run typecheck:app`, 앱 빌드 `npm run build:app`.
+- 로컬 preview `npm run preview:p0`. 광고 모의 검증은 먼저 `node tools/browser-preview/build-product-qa.mjs`, 이어 `?debug=1&qaAds=1`로 접속합니다. 실제 토스 광고와 다릅니다.
+- 클라우드 QA: `node tools/browser-preview/check-product-loop.mjs`. Playwright를 프로젝트에서 찾고 없으면 `BOXING_QA_MODULES`(설치된 node_modules)로 지정합니다. 브라우저 경로는 `BOXING_BROWSER_PATH`. 새 dependency 설치나 lockfile 재생성은 필요하지 않습니다.
+
+## 초기 P0 참고 자료
+
 이 폴더는 **「복싱 재능 알아보기」 P0 Vertical Slice**를 Codex/Antigravity가 제각각 재해석하지 않도록 만든 기준 패키지입니다.
 
 ## 지금 들어있는 것
@@ -39,9 +50,9 @@ npm test
 - P0 고정 시퀀스 10펀치
 - P0 임시 점수
 
-## 아직 없는 것
+## 초기 P0 작성 당시 미구현 항목 (현재 상태 아님)
 
-이 패키지는 **완성된 React Native 앱이 아닙니다.**
+아래 목록은 초기 P0의 미구현 항목이며 현재 구현 상태는 문서 상단과 최신 인수인계를 참고합니다.
 
 P0 핵심 판정 엔진과 문서가 기준으로 들어 있으며, Codex가 이를 앱인토스 React Native 프로젝트에 통합하면서 다음을 구현해야 합니다.
 

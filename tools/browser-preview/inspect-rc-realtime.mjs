@@ -1,7 +1,7 @@
-import { chromium } from 'file:///C:/Users/cj799/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
+import { chromium } from './qa-runtime.mjs';
 import {writeFile} from 'node:fs/promises';
 import assert from 'node:assert/strict';
-const browser=await chromium.launch({channel:'msedge',headless:true});
+const browser=await chromium.launch({headless:true});
 try{
  const page=await browser.newPage({viewport:{width:390,height:844}});
  await page.addInitScript(()=>{window.__audioEvents=[];const play=HTMLMediaElement.prototype.play;HTMLMediaElement.prototype.play=function(){const at=performance.now();const source=this.src;return play.call(this).then(()=>window.__audioEvents.push({source,at,ok:true}),e=>window.__audioEvents.push({source,at,ok:false,error:e.name}));};});

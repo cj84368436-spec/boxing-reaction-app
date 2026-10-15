@@ -1,10 +1,10 @@
-import { chromium } from 'file:///C:/Users/cj799/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
+import { chromium } from './qa-runtime.mjs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import { P0_ATTACKS } from '../../.preview-dist/game/config/p0Attacks.js';
 const out='release/captures/2026-09-15';
 await mkdir(out,{recursive:true});
-const browser=await chromium.launch({channel:'msedge',headless:true});
+const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1});
 const errors=[], results=[]; page.on('pageerror',error=>errors.push(error.message));
 const stamp=new Date('2026-09-15T03:00:00Z');

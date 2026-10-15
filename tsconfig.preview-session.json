@@ -26,6 +26,8 @@
     "src/app/motion/cartoonSprites.ts",
     "src/app/motion/artAtlas.ts",
     "src/app/session/progression.ts",
-    "src/app/session/competitionClient.ts"
+    "src/app/session/competitionClient.ts",
+    "src/app/product/playRuntime.ts",
+    "src/app/product/resultSummary.ts"
   ]
 }

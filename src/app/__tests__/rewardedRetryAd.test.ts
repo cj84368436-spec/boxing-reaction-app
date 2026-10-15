@@ -10,6 +10,18 @@ import {
 } from '../ads/rewardedRetryAd';
 
 describe('rewarded retry ad', () => {
+  it('records native events once, distinguishes show from request and survives a broken analytics sink',()=>{
+    const events:string[]=[];const controller=new RewardedRetryAdController(port,undefined,(name)=>{events.push(name);throw new Error('local sink');});
+    controller.prepare(()=>{});loadEvent?.({type:'loaded'});loadEvent?.({type:'loaded'});
+    const done=jest.fn();controller.attempt(done);
+    showEvent?.({type:'requested'});expect(events).not.toContain('ad_start');
+    showEvent?.({type:'show'});showEvent?.({type:'show'});
+    showEvent?.({type:'userEarnedReward',data:{unitType:'retry',unitAmount:1}});
+    showEvent?.({type:'userEarnedReward',data:{unitType:'retry',unitAmount:1}});
+    expect(done).not.toHaveBeenCalled();showEvent?.({type:'dismissed'});showEvent?.({type:'dismissed'});
+    expect(done).toHaveBeenCalledTimes(1);
+    expect(events).toEqual(['ad_request','ad_loaded','ad_start','ad_reward','ad_dismissed','ad_complete']);
+  });
   it.each(['isLoadSupported', 'load'] as const)('handles a synchronous %s failure without granting a reward', method => {
     const controller = new RewardedRetryAdController({...port,
       [method]: () => {throw new Error('bridge failed');}});
@@ -112,18 +124,23 @@ describe('rewarded retry ad', () => {
     expect(states.at(-1)?.phase).toBe('ready');
   });
 
-  it('requires an explicit return tap after a missing dismissal and preserves earned reward', () => {
+  it('never grants reward without dismissal even after the show deadline and recovery tap', () => {
     const controller = new RewardedRetryAdController(port);
     const reward = jest.fn();
     controller.prepare(state => states.push(state));
-    loadEvent?.({type: 'loaded'});
+    loadEvent?.({type:'loaded'});
     controller.attempt(reward);
-    showEvent?.({type: 'userEarnedReward', data: {unitType: '재도전', unitAmount: 1}});
+    const oldShow = showEvent;
+    showEvent?.({type:'userEarnedReward',data:{unitType:'재도전',unitAmount:1}});
     jest.advanceTimersByTime(120000);
-    expect(states.at(-1)?.phase).toBe('error');
-    expect(reward).not.toHaveBeenCalled();
     controller.attempt(reward);
-    showEvent?.({type: 'dismissed'});
+    expect(reward).not.toHaveBeenCalled();
+    oldShow?.({type:'dismissed'});
+    expect(reward).not.toHaveBeenCalled();
+    loadEvent?.({type:'loaded'});
+    controller.attempt(reward);
+    showEvent?.({type:'userEarnedReward',data:{unitType:'재도전',unitAmount:1}});
+    showEvent?.({type:'dismissed'});
     expect(reward).toHaveBeenCalledTimes(1);
   });
 

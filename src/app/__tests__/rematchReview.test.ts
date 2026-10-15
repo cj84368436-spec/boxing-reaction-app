@@ -1,3 +1,6 @@
+import {ATTACK_NAMES, attackLabel} from '../motion/attackNames';
+import {CANDIDATE_ATTACKS} from '../session/candidateRules';
+import {CHAMPION_UPPERCUT} from '../session/championRules';
 import { P0_ATTACKS } from '../../game/config/p0Attacks';
 import { P0TenPunchSession } from '../session/P0TenPunchSession';
 import { getRematchReview } from '../motion/coachPresentation';
@@ -35,3 +38,12 @@ test('no-input losses do not get a fabricated timing deficit',()=>{
   expect(review.focusBody).not.toMatch(/[0-9]초|조금만|아깝/);
   expect(review.focusBody).toContain('한 번');
 });
+
+test.each([['LEAD_JAB_HEAD','잽'],['REAR_STRAIGHT_HEAD','스트레이트'],['LEAD_HOOK_HEAD','훅'],['LEAD_UPPERCUT_HEAD','어퍼컷']])('names %s correctly in the actual miss review', (attackId,label)=>{
+ const {snapshot}=play(null);
+ const first=snapshot.results[0]!;
+ const result={...first,attackId,outcome:'HIT' as const,telemetry:{...first.telemetry,inputStatus:'NO_INPUT' as const}};
+ expect(getRematchReview([result],1,true).focusTitle).toBe('1번째 '+label);
+});
+
+test('every actual attack has a shared detailed-log and review name',()=>{expect(Object.keys(ATTACK_NAMES).sort()).toEqual([...Object.keys(CANDIDATE_ATTACKS),CHAMPION_UPPERCUT.attackId].sort());for(const id of Object.keys(ATTACK_NAMES))expect(attackLabel(id)).not.toBe('알 수 없는 공격');});

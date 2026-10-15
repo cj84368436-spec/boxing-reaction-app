@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
-import { chromium } from 'file:///C:/Users/cj799/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
+import { chromium } from './qa-runtime.mjs';
 import { createPreviewServer } from './server.mjs';
 
 const server = createPreviewServer();
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const origin = `http://127.0.0.1:${server.address().port}`;
-const browser = await chromium.launch({ channel: 'msedge', headless: true });
+const browser = await chromium.launch({ headless: true });
 const errors = [];
 try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
@@ -33,9 +33,9 @@ try {
   }
   await page.clock.fastForward(320 / 1.12);
   assert.equal(await page.locator('image[href*="uppercut.png"]').count(), 1);
-  await page.screenshot({ path: 'art-direction/checks/champion-uppercut-390.png' });
+  await page.screenshot({ path: 'artifacts/cloud-qa/champion-uppercut-390.png' });
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({uppercutIndex: uppercut.attackIndex, visibleButtons: 6, uppercutImageLoaded: true, screenshot: 'art-direction/checks/champion-uppercut-390.png'}));
+  console.log(JSON.stringify({uppercutIndex: uppercut.attackIndex, visibleButtons: 6, uppercutImageLoaded: true, screenshot: 'artifacts/cloud-qa/champion-uppercut-390.png'}));
 } finally {
   await browser.close();
   await new Promise(resolve => server.close(resolve));

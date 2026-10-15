@@ -1,4 +1,4 @@
-import { chromium } from 'file:///C:/Users/cj799/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
+import { chromium, requireQaModule } from './qa-runtime.mjs';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
@@ -6,7 +6,7 @@ import { buildBoxerArtwork } from '../../.preview-dist/app/motion/boxingArtwork.
 import { projectCombatPose } from '../../.preview-dist/app/motion/firstPersonPresentation.js';
 import { P0TenPunchSession } from '../../.preview-dist/app/session/P0TenPunchSession.js';
 import { P0_ATTACKS } from '../../.preview-dist/game/config/p0Attacks.js';
-const require=createRequire(import.meta.url), sharp=require('C:/Users/cj799/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/sharp');
+const require=createRequire(import.meta.url), sharp=requireQaModule('sharp');
 const out='release/adversarial-2026-09-15'; await mkdir(out,{recursive:true});
 const sources={LEAD_JAB_HEAD:'144_13',REAR_STRAIGHT_HEAD:'144_20',LEAD_HOOK_HEAD:'14_01'};
 const audit=[];
@@ -31,7 +31,7 @@ for(const file of ['lead-jab','rear-straight','lead-hook']) {
  }col++;
 }
 await sharp({create:{width:840,height:1720,channels:4,background:'#142433'}}).composite(tiles).png().toFile(out+'/motion-contact-sheet.png');
-const browser=await chromium.launch({channel:'msedge',headless:true});const page=await browser.newPage({viewport:{width:390,height:844}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+const browser=await chromium.launch({headless:true});const page=await browser.newPage({viewport:{width:390,height:844}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
 const stamp=new Date('2026-09-15T07:00:00Z');await page.clock.install({time:stamp});await page.clock.pauseAt(stamp);
 await page.goto('http://127.0.0.1:3000/?debug=1&seed=123');await page.waitForFunction(()=>!!window.__p0Preview);
 await page.locator('#fast-button').click();await page.clock.runFor(2500);

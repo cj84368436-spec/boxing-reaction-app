@@ -1,8 +1,8 @@
-import {chromium} from 'file:///C:/Users/cj799/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
+import {chromium} from './qa-runtime.mjs';
 import {createPreviewServer} from './server.mjs';
 import assert from 'node:assert/strict';import {mkdtemp,writeFile} from 'node:fs/promises';import {tmpdir} from 'node:os';import path from 'node:path';
 const directory=await mkdtemp(path.join(tmpdir(),'boxing-records-qa-'));const server=createPreviewServer({rankingFile:path.join(directory,'records.json')});await new Promise(r=>server.listen(0,'127.0.0.1',r));
-const origin='http://127.0.0.1:'+server.address().port,browser=await chromium.launch({channel:'msedge',headless:true});const errors=[],results=[];
+const origin='http://127.0.0.1:'+server.address().port,browser=await chromium.launch({headless:true});const errors=[],results=[];
 try{
  for(const width of [390,320]){
   const p=await browser.newPage({viewport:{width,height:width===320?568:844}});p.on('pageerror',e=>errors.push(e.message));let starts=0;p.on('request',r=>{if(r.method()==='POST'&&r.url().endsWith('/api/challenge'))starts++;});
@@ -14,7 +14,7 @@ try{
   assert.equal(starts,0);assert.equal(await p.locator('#records-card').isVisible(),true);assert.equal((await p.evaluate(()=>window.__p0Preview.snapshot())).sessionStartedAtMs,before.sessionStartedAtMs);
   assert.match(await p.locator('#records-list').innerText(),/입문/);assert.match(await p.locator('#records-list').innerText(),/챔피언/);
   const action=await p.locator('#records-close-button').boundingBox();assert.ok(action.y+action.height<=(width===320?568:844));
-  await p.screenshot({path:'art-direction/checks/records-'+width+'.png'});
+  await p.screenshot({path:'artifacts/cloud-qa/records-'+width+'.png'});
   await p.locator('#records-close-button').click();assert.equal(await p.locator('#intro-card').isVisible(),true);
   // A late daily-start response must not restart the game after closing records.
   let respond;const responseGate=new Promise(r=>respond=r);await p.route('**/api/challenge',async route=>{await responseGate;await route.fulfill({json:{id:'qa',seed:123,level:2,day:'2026-09-20',leadInMs:2000}});});
@@ -24,5 +24,5 @@ try{
   assert.notEqual((await p.evaluate(()=>window.__p0Preview.snapshot())).sessionStartedAtMs,undefined);
   results.push({width,readDoesNotStart:true,loadingGuard:true,lateStartIgnored:true,explicitStart:true});await p.close();
  }
- assert.deepEqual(errors,[]);await writeFile('art-direction/checks/records-browser.json',JSON.stringify({results,errors},null,2));console.log(JSON.stringify({results,errors}));
+ assert.deepEqual(errors,[]);await writeFile('artifacts/cloud-qa/records-browser.json',JSON.stringify({results,errors},null,2));console.log(JSON.stringify({results,errors}));
 }finally{await browser.close();await new Promise(r=>server.close(r));}

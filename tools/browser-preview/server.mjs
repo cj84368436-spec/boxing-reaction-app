@@ -19,6 +19,7 @@ const ROOT = join(__dirname, '..', '..');
 const LOOPBACK_HOST = '127.0.0.1';
 
 const EXACT_ROUTES = new Map([
+  ['/qa-product.js', join(ROOT,'.preview-dist','qa-product.js')],
   ['/', join(__dirname, 'preview.html')],
   ['/index.html', join(__dirname, 'preview.html')],
   ['/preview.html', join(__dirname, 'preview.html')],
@@ -27,6 +28,7 @@ const EXACT_ROUTES = new Map([
 ]);
 
 const DIRECTORY_ROUTES = [
+  {urlPrefix:'/.preview-dist/app/product/',directory:join(ROOT,'.preview-dist','app','product'),extensions:new Set(['.js'])},
   {urlPrefix:'/src/app/assets/art/', directory:join(ROOT,'src','app','assets','art'),extensions:new Set(['.png'])},
   {
     urlPrefix: '/src/app/assets/sfx/',

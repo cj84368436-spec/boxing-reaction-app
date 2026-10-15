@@ -21,6 +21,8 @@ export function candidatePatterns(seed: number): readonly ComboDefinition[] {
 export function candidateFailureReason(attackId:string,input?:string):string {
  if(input==='GUARD') return '가드 소진 · 회피로 회복하세요';
  if(attackId==='LEAD_UPPERCUT_HEAD') return '어퍼컷은 뒤로 피하세요';
- if(attackId==='REAR_STRAIGHT_HEAD') return input==='BACK'?'전진 스트레이트 · 뒤로도 닿아요':'오른쪽은 뒷손 궤적 · 왼쪽으로 피하세요';
- return '훅 안쪽으로 이동 · 오른쪽으로 숙이세요';
+ if(attackId==='LEAD_JAB_HEAD') return '잽은 왼쪽 또는 오른쪽으로 피하세요';
+ if(attackId==='REAR_STRAIGHT_HEAD') return input==='BACK'?'전진 스트레이트 · 뒤로도 닿아요':input==='RIGHT'?'오른쪽은 뒷손 궤적 · 왼쪽으로 피하세요':'스트레이트는 왼쪽으로 피하세요';
+ if(attackId==='LEAD_HOOK_HEAD') return '훅은 오른쪽으로 피하세요';
+ return '선택한 방어 방향이 이 공격과 맞지 않았습니다.';
 }
