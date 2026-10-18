@@ -1,3 +1,4 @@
+import {createAppsAnalyticsAdapter} from '../analytics/appsAnalyticsAdapter';
 import {PlayRuntime} from '../product/playRuntime';
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions',()=>({__esModule:true,default:jest.fn(()=>({width:390,height:844,scale:3,fontScale:1}))}));
 jest.mock('@granite-js/react-native',()=>{const {dirname,join}=require('node:path');const sdk=dirname(require.resolve('@granite-js/react-native/package.json'));return {IOScrollView:jest.requireActual(join(sdk,'src/intersection-observer/IOScrollView')).default};});
@@ -35,6 +36,41 @@ describe('30-punch survival screen',()=>{
  function primeDeath(){runtime.endRound(runtime.startRound(),'knockout');}
  function knockOut(){now+=200000;act(()=>frame?.(now));}
  function start(){fireEvent.press(screen.getByRole('button',{name:'도전 시작'}));}
+ it.each(['direct','shared_result','unknown'] as const)('retains %s through records, tutorial, remount and an actual game',async source=>{
+   runtime=new PlayRuntime(undefined,source);
+   const send=jest.fn(async(_payload:any)=>{}),adapter=createAppsAnalyticsAdapter(send,{appVersion:'test'});
+   runtime.events.subscribe(adapter.record,true);
+   const view=await setup();
+   fireEvent.press(screen.getByRole('button',{name:'내 기록 보기'}));
+   fireEvent.press(screen.getByRole('button',{name:'기록 닫기'}));
+   view.unmount();await setup();jest.useFakeTimers();
+   try {
+     start();expect(screen.getByTestId('defense-tutorial')).toBeTruthy();
+     expect(runtime.events.snapshot().filter(e=>e.name==='game_start')).toHaveLength(0);
+     fireEvent(screen.getByRole('button',{name:'← 왼쪽'}),'pressIn');act(()=>jest.advanceTimersByTime(2000));
+     fireEvent(screen.getByRole('button',{name:'가드'}),'pressIn');act(()=>jest.advanceTimersByTime(2000));
+     expect(screen.getByText('0 / 30')).toBeTruthy();
+     const logs=send.mock.calls.map(c=>c[0]);
+     expect(logs.filter(p=>p.log_name==='boxing_app_open')).toHaveLength(1);
+     expect(logs.filter(p=>p.log_name==='boxing_game_start')).toHaveLength(1);
+     expect(logs.some(p=>p.log_name==='boxing_landing_view')).toBe(true);
+     expect(logs.every(p=>p.params.entry_source===source)).toBe(true);
+     expect(runtime.events.snapshot().every(e=>e.data.entry_source===source)).toBe(true);
+     expect(Storage.setItem).not.toHaveBeenCalled();expect(runtime.deathsSinceLastAd).toBe(0);
+   } finally {adapter.dispose();jest.useRealTimers();}
+ });
+ it('rerenders and repeated result effects do not duplicate operational events',async()=>{
+   const send=jest.fn(async(_payload:any)=>{}),adapter=createAppsAnalyticsAdapter(send,{appVersion:'0.1.0'});runtime.events.subscribe(adapter.record,true);
+   try{
+     const view=await setup();
+     const rerender=()=>view.rerender(<P0GameScreen runtime={runtime} clock={{nowMs:()=>now}} readyLeadInMs={0} seed={123} retryAdGate={immediateRetryAd()} stageAdGate={immediateStageAd()}/>);
+     rerender();rerender();start();knockOut();rerender();rerender();await act(async()=>{});
+     const count=(name:string)=>send.mock.calls.filter(c=>c[0].log_name==='boxing_'+name).length;
+     expect(count('app_open')).toBe(1);expect(count('landing_view')).toBe(1);expect(count('game_start')).toBe(1);expect(count('game_end')).toBe(1);expect(count('result_view')).toBe(1);
+     fireEvent.press(screen.getByRole('button',{name:'다시 도전'}));rerender();await act(async()=>{});expect(count('retry_game_start')).toBe(1);
+     expect(send.mock.calls.find(c=>c[0].log_name==='boxing_game_end')![0].params).toMatchObject({reason:'knockout',difficulty:1,survived:4,perfect:0});
+   }finally{adapter.dispose();}
+ });
  it('links free and remounted ad retries once, excluding a new home challenge',async()=>{
    let view=await setup();start();knockOut();
    const previous=runtime.events.snapshot().filter(e=>e.name==='game_start').at(-1)!.data.roundId;
@@ -73,6 +109,19 @@ describe('30-punch survival screen',()=>{
    act(()=>{show?.onEvent({type:'userEarnedReward',data:{unitType:'retry',unitAmount:1}});show?.onEvent({type:'dismissed'});show?.onEvent({type:'dismissed'});});
    expect(starts).toHaveBeenCalledTimes(3);expect(runtime.deathsSinceLastAd).toBe(0);
    expect(screen.getByText('0 / 30')).toBeTruthy();expect(runtime.analyticsFailureCount).toBeGreaterThan(0);
+ });
+ it('new user reaches exactly one real game through accessibility activation only',async()=>{
+   runtime=new PlayRuntime();await setup();jest.useFakeTimers();
+   try {
+     start();const event={nativeEvent:{},currentTarget:1,target:1};
+     fireEvent(screen.getByRole('button',{name:'← 왼쪽'}),'click',event);
+     act(()=>jest.advanceTimersByTime(2000));
+     fireEvent(screen.getByRole('button',{name:'가드'}),'click',event);
+     act(()=>jest.advanceTimersByTime(2000));
+     expect(screen.queryByTestId('defense-tutorial')).toBeNull();expect(screen.getByText('0 / 30')).toBeTruthy();
+     expect(runtime.events.snapshot().filter(e=>e.name==='game_start')).toHaveLength(1);
+     expect(runtime.deathsSinceLastAd).toBe(0);expect(Storage.setItem).not.toHaveBeenCalled();
+   }finally{jest.useRealTimers();}
  });
  it('keeps tutorial outside real rounds, storage, lives, and the ad counter',async()=>{
    runtime=new PlayRuntime();
@@ -113,6 +162,25 @@ describe('30-punch survival screen',()=>{
    fireEvent.press(screen.getByRole('button',{name:'상세 기록 접기'}));
    expect(screen.queryByTestId('result-0')).toBeNull();
  });
+ it.each([false,true])('retry text contrast, including note and pressed state (disabled=%s)',async disabled=>{
+   if(disabled)primeDeath();await setup(disabled?new RewardedRetryAdController():immediateRetryAd());start();knockOut();
+   const button=screen.getByRole('button',{name:disabled?'광고 이용 불가':'다시 도전'});
+   let pressable=button;while(typeof pressable.props.style!=='function'&&pressable.parent)pressable=pressable.parent;
+   const rgb=(hex:string)=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));
+   const mix=(a:number[],b:number[],o:number)=>a.map((v,i)=>v*o+b[i]!*(1-o));
+   const lum=(c:number[])=>c.map(v=>v/255).reduce((sum,v,i)=>sum+[.2126,.7152,.0722][i]!*(v<=.04045?v/12.92:((v+.055)/1.055)**2.4),0);
+   for(const pressed of [false,true]){
+     const style=StyleSheet.flatten(pressable.props.style({pressed}));const opacity=style.opacity??1;
+     const bg=mix(rgb(style.backgroundColor),rgb('#07111B'),opacity);
+     const labels=button.findAll(n=>typeof n.type==='string'&&String(n.type)==='Text');
+     expect(labels.length).toBeGreaterThan(0);
+     for(const label of labels){
+       const color=StyleSheet.flatten(label.props.style).color;
+       const fg=mix(rgb(color),rgb('#07111B'),opacity);
+       expect((lum(fg)+.05)/(lum(bg)+.05)).toBeGreaterThanOrEqual(4.5);
+     }
+   }
+ });
  it('offers a first knockout retry without requesting an ad',async()=>{
    const attempt=jest.fn();
    await setup({prepare(observer){observer({phase:'ready',message:''});return jest.fn();},attempt,dispose:jest.fn()});
@@ -146,7 +214,7 @@ describe('30-punch survival screen',()=>{
    expect(runtime.deathsSinceLastAd).toBe(1);
    act(()=>{show?.onEvent({type:'dismissed'});show?.onEvent({type:'userEarnedReward',data:{unitType:'retry',unitAmount:1}});});
    expect(runtime.deathsSinceLastAd).toBe(1);
-   expect(screen.getByText('다운 · 4 / 30 생존')).toBeTruthy();
+   expect(screen.getByTestId('viral-result-score')).toHaveTextContent('4 / 30');
    const retries=runtime.events.snapshot().filter(e=>e.name==='retry_game_start');
    expect(retries).toHaveLength(2);expect(retries[1]!.data.previousRoundId).not.toBeNull();
    expect(retries[1]!.data.source).toBe('ad_retry');
@@ -176,15 +244,38 @@ describe('30-punch survival screen',()=>{
    for(const a of s.snapshot().scheduledAttacks){sample(a.attackStartScheduledAtMs!+300);fireEvent(screen.getByRole('button',{name:a.attackId==='LEAD_HOOK_HEAD'?'오른쪽 →':'← 왼쪽'}),'pressIn');sample(a.attackStartScheduledAtMs!+650);}sample(60000);
    const next=screen.getByRole('button',{name:'다음 난이도 도전'});
    const staleRetry=screen.getByRole('button',{name:'다시 도전'});
+   expect(screen.getByText('이동할 때 광고가 표시될 수 있어요.')).toBeTruthy();
+   expect(next.props.accessibilityHint).toBe('이동할 때 광고가 표시될 수 있어요.');
+   expect(staleRetry.props.accessibilityHint).toBeUndefined();
    fireEvent.press(next);fireEvent.press(next);fireEvent.press(staleRetry);
    expect(port.show).toHaveBeenCalledTimes(1);expect(retryAttempt).not.toHaveBeenCalled();
    expect(screen.getByRole('button',{name:'난이도 선택'})).toBeDisabled();
-   expect(screen.getByText('클리어 · 목숨 5개')).toBeTruthy();
+   expect(screen.getByText('완주 · PERFECT 30회')).toBeTruthy();
    act(()=>{stageShow?.onEvent({type:'dismissed'});stageShow?.onEvent({type:'dismissed'});});
    expect(runtime.events.snapshot().filter(e=>e.name==='game_start')).toHaveLength(2);
    expect(runtime.events.snapshot().filter(e=>e.name==='retry_game_start')).toHaveLength(0);
    expect(screen.getByText('0 / 30')).toBeTruthy();
    expect(retryAttempt).not.toHaveBeenCalled();expect(runtime.fullScreenBusy).toBe(false);
+ });
+ it.each(['unsupported','error'] as const)('clear stage %s keeps fallback transition without claiming an ad',async phase=>{
+   const port:FullScreenAdPort={isLoadSupported:()=>phase!=='unsupported',isShowSupported:()=>phase!=='unsupported',load:({onError})=>{onError(Error('load'));return jest.fn();},show:jest.fn()};
+   await setup(immediateRetryAd(),new StageInterstitialAdController(port));start();
+   const s=new P0TenPunchSession({nowMs:()=>0},ids,{ruleset:'candidate',survivalLevel:1,maxHits:5,seed:123});s.start();
+   for(const a of s.snapshot().scheduledAttacks){sample(a.attackStartScheduledAtMs!+300);fireEvent(screen.getByRole('button',{name:a.attackId==='LEAD_HOOK_HEAD'?'오른쪽 →':'← 왼쪽'}),'pressIn');sample(a.attackStartScheduledAtMs!+650);}sample(60000);
+   expect(screen.queryByText('이동할 때 광고가 표시될 수 있어요.')).toBeNull();
+   const next=screen.getByRole('button',{name:'다음 난이도 도전'});expect(next.props.accessibilityHint).toBeUndefined();
+   fireEvent.press(next);expect(port.show).not.toHaveBeenCalled();expect(screen.getByText('0 / 30')).toBeTruthy();
+   expect(runtime.deathsSinceLastAd).toBe(0);expect(runtime.events.snapshot().filter(e=>e.name==='game_start')).toHaveLength(2);
+ });
+ it('unsupported rewarded state offers consumer guidance, home and no free bypass',async()=>{
+   primeDeath();await setup(new RewardedRetryAdController());start();knockOut();
+   const starts=runtime.events.snapshot().filter(e=>e.name==='game_start').length;
+   expect(screen.getByText('현재 이 환경에서는 광고를 이용할 수 없어요.')).toBeTruthy();
+   expect(screen.queryByText(/QR/)).toBeNull();
+   const retry=screen.getByRole('button',{name:'광고 이용 불가'});expect(retry).toBeDisabled();fireEvent.press(retry);
+   expect(runtime.deathsSinceLastAd).toBe(2);expect(runtime.events.snapshot().filter(e=>e.name==='game_start')).toHaveLength(starts);
+   fireEvent.press(screen.getByRole('button',{name:'난이도 선택'}));expect(screen.getByRole('button',{name:'내 기록 보기'})).toBeTruthy();
+   expect(runtime.deathsSinceLastAd).toBe(2);
  });
  it('preserves runtime deaths through remount and ignores an unmounted ad completion',async()=>{
    primeDeath();
@@ -212,7 +303,7 @@ describe('30-punch survival screen',()=>{
      sample(attack.attackStartScheduledAtMs!+650);
    }
    sample(60000);
-   expect(screen.getByText('클리어 · 목숨 5개')).toBeTruthy();
+   expect(screen.getByText('완주 · PERFECT 30회')).toBeTruthy();
    expect(runtime.deathsSinceLastAd).toBe(1);
    fireEvent.press(screen.getByRole('button',{name:'다시 도전'}));
    expect(screen.getByText('0 / 30')).toBeTruthy();
@@ -224,7 +315,7 @@ describe('30-punch survival screen',()=>{
    const attempt=jest.fn(callback=>{finishAd=callback;return true;});
    const gate:RewardedRetryAdGate={prepare(observer){observer({phase:'ready',message:''});return jest.fn();},attempt,dispose:jest.fn()};
    await setup(gate);start();sample(120000);
-   expect(screen.getByTestId('summary-hit')).toHaveTextContent('피격 5');
+   fireEvent.press(screen.getByRole('button',{name:'상세 기록 보기'}));expect(screen.getByTestId('summary-hit')).toHaveTextContent('피격 5');
    fireEvent.press(screen.getByRole('button',{name:'난이도 선택'}));
    fireEvent.press(screen.getByRole('button',{name:'내 기록 보기'}));
    fireEvent.press(screen.getByRole('button',{name:'기록 닫기'}));
@@ -239,7 +330,7 @@ describe('30-punch survival screen',()=>{
    expect(runtime.deathsSinceLastAd).toBe(1);
    fireEvent.press(screen.getByRole('button',{name:'다시 도전'}));
    knockOut();
-   expect(screen.getByTestId('summary-hit')).toHaveTextContent('피격 5');
+   fireEvent.press(screen.getByRole('button',{name:'상세 기록 보기'}));expect(screen.getByTestId('summary-hit')).toHaveTextContent('피격 5');
    fireEvent.press(screen.getByRole('button',{name:'난이도 선택'}));
    start();
    expect(attempt).toHaveBeenCalledTimes(2);
@@ -256,7 +347,7 @@ describe('30-punch survival screen',()=>{
    fireEvent.press(screen.getByRole('button',{name:'광고 보고 다음 난이도 도전'}));
    expect(attempt).toHaveBeenCalledTimes(1);
    expect(stageAttempt).not.toHaveBeenCalled();
-   expect(screen.getByTestId('summary-hit')).toHaveTextContent('피격 5');
+   fireEvent.press(screen.getByRole('button',{name:'상세 기록 보기'}));expect(screen.getByTestId('summary-hit')).toHaveTextContent('피격 5');
    act(()=>finishAd?.());
    expect(screen.getByRole('button',{name:'일시 정지'})).toBeTruthy();
  });
@@ -321,7 +412,7 @@ describe('30-punch survival screen',()=>{
      expect(screen.getByRole('button',{name:'가드'})).toBeDisabled();
      fireEvent.press(screen.getByRole('button',{name:'계속하기'}));
      now+=120000;act(()=>frame?.(now));
-     expect(screen.getByTestId('summary-hit')).toHaveTextContent('피격 5');
+     fireEvent.press(screen.getByRole('button',{name:'상세 기록 보기'}));expect(screen.getByTestId('summary-hit')).toHaveTextContent('피격 5');
      expect(screen.queryByTestId('temporary-sfx-knockout')).toBeNull();
      fireEvent.press(screen.getByRole('button',{name:'난이도 선택'}));
      expect(screen.getByRole('button',{name:'도전 시작'})).toBeEnabled();
@@ -351,7 +442,7 @@ describe('30-punch survival screen',()=>{
    const view=await setup(gate);start();sample(120000);
    fireEvent.press(screen.getByRole('button',{name:'광고 보고 다시 도전'}));
    act(()=>show?.onEvent({type:'dismissed'}));
-   expect(screen.getByText('다운 · 4 / 30 생존')).toBeTruthy();
+   expect(screen.getByTestId('viral-result-score')).toHaveTextContent('4 / 30');
    act(()=>show?.onEvent({type:'userEarnedReward',data:{unitType:'재도전',unitAmount:1}}));
    expect(screen.getByText('0 / 30')).toBeTruthy();
    view.unmount();
@@ -368,11 +459,11 @@ describe('30-punch survival screen',()=>{
      fireEvent.press(screen.getByRole('button',{name:'광고 보고 다시 도전'}));
      act(()=>show?.onEvent({type:'userEarnedReward',data:{unitType:'재도전',unitAmount:1}}));
      act(()=>jest.advanceTimersByTime(120000));
-     expect(screen.getByText('다운 · 4 / 30 생존')).toBeTruthy();
+     expect(screen.getByTestId('viral-result-score')).toHaveTextContent('4 / 30');
      expect(screen.getByRole('button',{name:'광고 닫고 다시 준비'})).toBeEnabled();
      fireEvent.press(screen.getByRole('button',{name:'광고 닫고 다시 준비'}));
      expect(runtime.deathsSinceLastAd).toBe(2);
-     expect(screen.getByText('다운 · 4 / 30 생존')).toBeTruthy();
+     expect(screen.getByTestId('viral-result-score')).toHaveTextContent('4 / 30');
      fireEvent.press(screen.getByRole('button',{name:'광고 보고 다시 도전'}));
      act(()=>{show?.onEvent({type:'userEarnedReward',data:{unitType:'retry',unitAmount:1}});show?.onEvent({type:'dismissed'});});
      expect(screen.getByText('0 / 30')).toBeTruthy();
@@ -439,9 +530,9 @@ describe('30-punch survival screen',()=>{
    expect(screen.getByText(/숙이기 · 안전하게 방어/)).toBeTruthy();
  });
 it('opens only personal records without exposing online competition',async()=>{await setup();fireEvent.press(screen.getByRole('button',{name:'내 기록 보기'}));expect(screen.getByText('내 기록')).toBeTruthy();expect(screen.queryByText('오늘의 코스')).toBeNull();expect(screen.queryByRole('button',{name:'오늘의 코스 도전'})).toBeNull();expect(screen.queryByText(/순위|백분위|상위 \d+%/)).toBeNull();expect(screen.queryByRole('button',{name:'일시 정지'})).toBeNull();expect(screen.getByTestId('records-banner')).toHaveProp('accessibilityLabel','ait.v2.live.1dae02e06eca49ee');expect(Storage.setItem).not.toHaveBeenCalled();fireEvent.press(screen.getByRole('button',{name:'기록 닫기'}));expect(screen.queryByTestId('records-banner')).toBeNull();expect(screen.getByRole('button',{name:'도전 시작'})).toBeEnabled();});
- it('ends immediately on the fifth hit, plays the bell, records only resolved punches, and retries with full lives',async()=>{await setup();start();sample(120000);expect(screen.getByText('다운 · 4 / 30 생존')).toBeTruthy();expect(screen.getByTestId('summary-hit')).toHaveTextContent('피격 5');expect(screen.queryByTestId('result-5')).toBeNull();expect(COACH_LINES.downEarly.some(line=>screen.queryByText(line))).toBe(true);expect(screen.getByTestId('temporary-sfx-knockout')).toBeTruthy();await waitFor(()=>expect(Storage.setItem).toHaveBeenCalledTimes(1));expect(screen.queryByText('광고 시청 후 다시 도전할 수 있어요.')).toBeNull();fireEvent.press(screen.getByRole('button',{name:'다시 도전'}));expect(screen.getByText('0 / 30')).toBeTruthy();expect(screen.getByTestId('lives')).toHaveTextContent(/5 \/ 5/);expect(screen.queryByTestId('temporary-sfx-knockout')).toBeNull();});
- it('does not restart until the rewarded ad gate grants retry',async()=>{primeDeath();let finishAd:(()=>void)|undefined;const gate:RewardedRetryAdGate={prepare(observer){observer({phase:'ready',message:'테스트 광고 준비 완료'});return jest.fn();},attempt(onRewardedAndClosed){finishAd=onRewardedAndClosed;return true;},dispose:jest.fn()};await setup(gate);start();sample(120000);fireEvent.press(screen.getByRole('button',{name:'광고 보고 다시 도전'}));expect(screen.getByText('다운 · 4 / 30 생존')).toBeTruthy();act(()=>finishAd?.());expect(screen.getByText('0 / 30')).toBeTruthy();});
- it('unlocks the next level after a strong clear and persists records across remounts',async()=>{let finishStageAd:(()=>void)|undefined;const stageGate:StageInterstitialAdGate={prepare(observer){observer({phase:'ready'});return jest.fn();},attempt(onClosed){finishStageAd=onClosed;return true;},dispose:jest.fn()};const view=await setup(immediateRetryAd(),stageGate);start();const s=new P0TenPunchSession({nowMs:()=>0},ids,{ruleset:'candidate',survivalLevel:1,maxHits:5,seed:123});s.start();for(const a of s.snapshot().scheduledAttacks){sample(a.attackStartScheduledAtMs!+300);fireEvent(screen.getByRole('button',{name:a.attackId==='LEAD_HOOK_HEAD'?'오른쪽 →':'← 왼쪽'}),'pressIn');sample(a.attackStartScheduledAtMs!+650);}sample(60000);expect(screen.getByText('클리어 · 목숨 5개')).toBeTruthy();expect(screen.getByRole('button',{name:'다음 난이도 도전'})).toBeTruthy();expect(screen.queryByTestId('temporary-sfx-knockout')).toBeNull();await waitFor(()=>expect(Storage.setItem).toHaveBeenCalled());const raw=(Storage.setItem as jest.Mock).mock.calls.at(-1)[1];expect(JSON.parse(raw)).toMatchObject({unlocked:2,best:{1:{perfect:30,streak:30,lives:5}}});fireEvent.press(screen.getByRole('button',{name:'다음 난이도 도전'}));expect(screen.getByText('클리어 · 목숨 5개')).toBeTruthy();act(()=>finishStageAd?.());expect(screen.getByText('0 / 30')).toBeTruthy();view.unmount();(Storage.getItem as jest.Mock).mockResolvedValue(raw);await setup();expect(screen.getByRole('button',{name:'도전자'})).toBeEnabled();expect(screen.getByRole('button',{name:'챔피언'})).toBeDisabled();});
+ it('ends immediately on the fifth hit, plays the bell, records only resolved punches, and retries with full lives',async()=>{await setup();start();sample(120000);expect(screen.getByTestId('viral-result-score')).toHaveTextContent('4 / 30');fireEvent.press(screen.getByRole('button',{name:'상세 기록 보기'}));expect(screen.getByTestId('summary-hit')).toHaveTextContent('피격 5');expect(screen.queryByTestId('result-5')).toBeNull();expect(screen.getByTestId('viral-coach-line')).toHaveTextContent(/잽에 2번 맞았군/);expect(screen.getByTestId('temporary-sfx-knockout')).toBeTruthy();await waitFor(()=>expect(Storage.setItem).toHaveBeenCalledTimes(1));expect(screen.queryByText('광고 시청 후 다시 도전할 수 있어요.')).toBeNull();fireEvent.press(screen.getByRole('button',{name:'다시 도전'}));expect(screen.getByText('0 / 30')).toBeTruthy();expect(screen.getByTestId('lives')).toHaveTextContent(/5 \/ 5/);expect(screen.queryByTestId('temporary-sfx-knockout')).toBeNull();});
+ it('does not restart until the rewarded ad gate grants retry',async()=>{primeDeath();let finishAd:(()=>void)|undefined;const gate:RewardedRetryAdGate={prepare(observer){observer({phase:'ready',message:'테스트 광고 준비 완료'});return jest.fn();},attempt(onRewardedAndClosed){finishAd=onRewardedAndClosed;return true;},dispose:jest.fn()};await setup(gate);start();sample(120000);fireEvent.press(screen.getByRole('button',{name:'광고 보고 다시 도전'}));expect(screen.getByTestId('viral-result-score')).toHaveTextContent('4 / 30');act(()=>finishAd?.());expect(screen.getByText('0 / 30')).toBeTruthy();});
+ it('unlocks the next level after a strong clear and persists records across remounts',async()=>{let finishStageAd:(()=>void)|undefined;const stageGate:StageInterstitialAdGate={prepare(observer){observer({phase:'ready'});return jest.fn();},attempt(onClosed){finishStageAd=onClosed;return true;},dispose:jest.fn()};const view=await setup(immediateRetryAd(),stageGate);start();const s=new P0TenPunchSession({nowMs:()=>0},ids,{ruleset:'candidate',survivalLevel:1,maxHits:5,seed:123});s.start();for(const a of s.snapshot().scheduledAttacks){sample(a.attackStartScheduledAtMs!+300);fireEvent(screen.getByRole('button',{name:a.attackId==='LEAD_HOOK_HEAD'?'오른쪽 →':'← 왼쪽'}),'pressIn');sample(a.attackStartScheduledAtMs!+650);}sample(60000);expect(screen.getByText('완주 · PERFECT 30회')).toBeTruthy();expect(screen.getByRole('button',{name:'다음 난이도 도전'})).toBeTruthy();expect(screen.queryByTestId('temporary-sfx-knockout')).toBeNull();await waitFor(()=>expect(Storage.setItem).toHaveBeenCalled());const raw=(Storage.setItem as jest.Mock).mock.calls.at(-1)[1];expect(JSON.parse(raw)).toMatchObject({unlocked:2,best:{1:{perfect:30,streak:30,lives:5}}});fireEvent.press(screen.getByRole('button',{name:'다음 난이도 도전'}));expect(screen.getByText('완주 · PERFECT 30회')).toBeTruthy();act(()=>finishStageAd?.());expect(screen.getByText('0 / 30')).toBeTruthy();view.unmount();(Storage.getItem as jest.Mock).mockResolvedValue(raw);await setup();expect(screen.getByRole('button',{name:'도전자'})).toBeEnabled();expect(screen.getByRole('button',{name:'챔피언'})).toBeDisabled();});
  it('pauses without losing lives and silences audio on focus loss',async()=>{const listeners=new Map<string,Function>();jest.spyOn(AppState,'addEventListener').mockImplementation((event:any,fn:any)=>{listeners.set(event,fn);return {remove:jest.fn()};});await setup();start();sample(200);act(()=>listeners.get('blur')?.());expect(screen.getByRole('button',{name:'계속하기'})).toBeTruthy();sample(120000);expect(screen.getByText('0 / 30')).toBeTruthy();expect(screen.getByTestId('lives')).toHaveTextContent(/5 \/ 5/);act(()=>listeners.get('focus')?.());fireEvent.press(screen.getByRole('button',{name:'계속하기'}));now+=1000;act(()=>frame?.(now));expect(screen.getByText('1 / 30')).toBeTruthy();});
  it('waits for foreground after rewarded completion and then prepares automatically',async()=>{primeDeath();
    const listeners=new Map<string,Function>();
@@ -455,7 +546,7 @@ it('opens only personal records without exposing online competition',async()=>{a
    expect(runtime.deathsSinceLastAd).toBe(0);
    expect(screen.queryByRole('button',{name:'계속하기'})).toBeNull();
    knockOut(); // No round exists yet, despite advancing wall time.
-   expect(screen.getByText('다운 · 4 / 30 생존')).toBeTruthy();
+   expect(screen.getByTestId('viral-result-score')).toHaveTextContent('4 / 30');
    act(()=>listeners.get('change')?.('active'));
    expect(screen.getByText('0 / 30')).toBeTruthy();
    expect(screen.getByTestId('lives')).toHaveTextContent(/5 \/ 5/);

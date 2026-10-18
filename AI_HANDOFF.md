@@ -1,6 +1,67 @@
-# 최신 상태: 2회 knockout 재도전 루프 (2026-10-15)
+# 최신 상태: 출시 감사 네 결함 수정 (2026-10-18)
 
-- 기준 태그: `v1-product-loop-baseline` (로컬). 다음 단계는 [실기기 검증 체크리스트](docs/DEVICE_VALIDATION_V1.md)의 iOS/Android 실행이며, C1/C2 확인 전 2차 개선으로 넘어가지 않는다.
+- clear → 다음 난이도 광고 가능성을 CTA 앞과 accessibilityHint로 안내. 실패/미지원 전환 및 광고 주기·성공 계약은 유지한다.
+- 방어 버튼의 비터치 접근성 activation을 추가하고 물리 pressIn 입력과 중복되지 않게 했다. RN Pressability 즉시/지연 해제·취소, 접근성만으로 신규 튜토리얼→실제 경기 검증. 실제 VoiceOver/TalkBack은 미완료다.
+- 재도전 대비: 정상/눌림/비활성 주 문구 5.99/7.20/11.37:1. QR 개발 문구를 소비자 안내로 변경했다.
+- 이번 실행: 엔진 47 / 앱 459(55 suites) / preview 13, 타입·빌드 통과. 전용 RN 64 tests, 320/375/390 브라우저 수정 QA 및 product-loop/recent/revisit/records/share/viral/entry-source·mock Analytics QA 통과.
+- [수정 보고서](docs/audits/RELEASE_FIXES_2026-10-18.md). 기존 미커밋 구현 보존. 커밋·push·업로드·배포 없음.
+- **정식 출시 불가 유지:** C1/C2, 실제 공유창/HTTPS→Toss 진입/Live Analytics, OS 접근성 실기기 및 등급·썸네일·설명·콘솔 자료 게이트 미완료. 기존 감사·기기 체크리스트 보존.
+
+# 이전 상태: 결과 공유 진입 계측 (2026-10-18)
+
+- 공유 링크 내부 URI를 `intoss://boxing-talent-test/shared`로 변경했다. 공식 getSchemeUri로 최초 URI를 읽고 direct/shared_result/unknown을 runtime에 한 번 고정한다. query/원본 URI/식별자 전송과 Storage 추가 없음.
+- app_open 전에 출처를 확정한 뒤 기존 journal replay와 eventLog adapter를 연결한다. 모든 운영 이벤트에 allowlist entry_source를 유지한다. 실제 게임 source/retry 의미, 광고·튜토리얼·recent/revisit·viral UI는 그대로다.
+- /shared와 미등록 경로는 기존 홈을 사용한다. 홈 UI·공유 문구는 변경하지 않았다. 과거 root 공유 링크는 소급 식별하지 못한다.
+- 검증: engine 47 / 앱 443(54 suites) / preview 13, 타입·앱 빌드 통과. 3화면 × 3출처 실제 경기/광고 QA 및 product-loop/recent/revisit/records/share/viral QA 통과.
+- [공유 진입 계약·콘솔 지표·검증](docs/SHARED_ENTRY_2026-10-18.md). 이벤트 횟수≠사용자 수. 전체 game_start/landing에는 재도전이 포함된다.
+- **C1/C2, 실제 RN 공유창, HTTPS 링크 → Toss 진입, SDK 비정상 URI 부팅 경계, Live 수집은 여전히 실기기 검증 보류.** 배포·push·실제 이벤트 전송 없음.
+
+# 이전 상태: Apps in Toss 운영 Analytics 연결 (2026-10-17)
+
+- 기존 ProductEvents의 500개 메모리 journal을 보존하고 observer → Apps adapter → 공식 `eventLog` 경로를 추가했다. native entry에서 한 번 연결하며 먼저 기록된 app_open을 replay한다. SDK 2.10.10 RN API에 없는 소문자 Analytics.screen/click을 호출하지 않는다.
+- 핵심 17개 이벤트만 `boxing_` namespace로 전송한다. ad_request/ad_loaded는 로컬만 유지한다. payload allowlist, 임시 경기/광고 연결 토큰, 동기/비동기 실패 및 5초 지연 격리, 중복 제거와 동시 요청 상한 적용. 자체 큐/재시도/서버/추적 ID 영구 저장 없음.
+- 개발·Sandbox·browser preview는 전송 비활성, Jest는 명시적 mock. QR는 공식 문서상 콘솔 수집 대상이 아니다. Live 수집/콘솔 표시를 실제 검증한 것은 아니다. **출시 다음 날 분석 > 이벤트에서 boxing_ 이벤트를 확인**한다.
+- game_end/result_view에 기존 계산값 기반 계측 속성만 추가했다. 게임 UI·lifecycle·death/광고 전이·share adapter·recent/revisit·기록 schema/comparator·package/lockfile 변경 없음.
+- 검증: 엔진 47 / 앱 404(52 suites) / preview 13, 타입·앱 빌드, product-loop/recent/revisit/records/share/viral browser QA 통과. 보호 파일 110개 변경 없음.
+- [운영 계측 계약·콘솔 확인 가이드](docs/APPS_ANALYTICS_2026-10-17.md). 이벤트 수≠사용자 수. 공식 DAU는 대시보드에서 확인하되 per-event 고유 사용자/세션 정의 및 콘솔 raw join 가능 여부는 별도 확인한다. entry_source는 unknown: external_share만으로 결과 공유 유입을 특정할 수 없다.
+- **C1/C2 및 실제 RN 공유창/수신 링크 검증은 계속 보류.** 운영 수집 확인 또한 별도 게이트이며 배포·push·실제 Analytics 전송 테스트는 하지 않았다.
+
+# 이전 상태: 공유를 고려한 결과 화면 (2026-10-17)
+
+- 큰 생존 수/완주 → 실제 기록 기반 관장 한 줄 → 최근/최고 비교·가까운 목표 → primary 재도전 → 친구 질문·보조 공유 → 상세 복기로 정리했다. 홈·게임 엔진·광고 gate·공유 adapter·저장 정책은 유지한다.
+- `resultFacts`를 화면과 공유 문구가 함께 사용하고, `buildViralResultPresentation`은 deterministic 문구만 만든다. 첫 기록과 실제 최고 갱신을 구분한다. 과거 v1 best는 recent 자격 검사로 배제하지 않는다.
+- `친구에게 기록 보내기`는 기존 텍스트 공유를 실행한다. 친구 대결·보상·순위·새 이벤트는 추가하지 않았다. 상세 영역의 기록은 보존하며 저장 실패 안내는 접지 않는다.
+- 이번 검증: 엔진 47 / 앱 372 / preview 13 통과, 타입·빌드 통과. 320/375/390 browser 검증과 기존 product/recent/revisit/records QA 통과. [상세 결과](docs/VIRAL_RESULT_2026-10-17.md).
+- **C1/C2 및 실제 Apps in Toss 공유창·링크 진입 검증은 계속 보류.** 공유 욕구/공유율·재도전율 효과를 클라우드 테스트로 입증한 것은 아니다. 기존 실기기 체크리스트 유지.
+
+# 이전 상태: 실제 경기 결과 텍스트 공유 (2026-10-16)
+
+- 결과 화면 재도전 아래 보조 `결과 공유` 버튼. 난이도·이번 생존/완주·PERFECT와 실제 최고 갱신 또는 개선 한 줄만 공유한다. 첫 기록은 신기록으로 표현하지 않고 이모티콘·사용자 ID·roundId/runtimeId·seed는 payload에 넣지 않는다.
+- React Native 기본 Share 사용. SDK 2.10.10의 share는 native 반환을 기다리지 않는 void wrapper여서 선택하지 않았다. iOS 활동 완료/취소와 Android chooser 호출 응답을 구분하며 전송/수신 성공으로 해석하지 않는다.
+- 공식 getTossShareLink로 기존 `intoss://boxing-talent-test` 홈 링크만 생성한다. 실패·1.5초 초과 시 텍스트만 공유한다. challenge/추적 파라미터·동일 seed 실행 없음. 공유 유입 측정은 아직 불가.
+- singleton adapter의 요청 잠금, Android handoff 1초 중복 방어, 화면 종료/재도전 시 늦은 링크 요청 폐기. 공유 실패/취소는 경기·기록·광고 카운터를 바꾸지 않는다. lifecycle/광고 controller/저장 모델 변경 없음.
+- 내부 로컬 이벤트 share_tap/share_outcome 추가. [공유 구현·검증 기록](docs/RESULT_SHARE_2026-10-16.md). 외부 분석 전송·배포·실제 메시지 전송 테스트 안 함.
+- **C1/C2 및 실제 공유창/수신 링크의 Apps in Toss 기기 검증은 보류.** [기존 기기 체크리스트](docs/DEVICE_VALIDATION_V1.md)는 보존했다. 친구 대결·동일 조건 challenge 등 다음 기능은 구현하지 않는다.
+
+# 이전 상태: 최근 기록 기반 홈 다음 목표 (2026-10-16)
+
+- 기존 난이도별 recent/best를 읽어 홈 기록 영역에 목표 하나만 표시한다. `buildRevisitPrompt` 순수 함수가 생성하며 새 저장 필드·history·방문일·미션·보상은 없다.
+- 생존 차이 5회 이내는 ‘최고 생존 기록까지 N회’, 더 멀면 기존 결과 화면의 가까운 목표를 재사용한다. comparator 동점 또는 과거 clear 뒤 최근 KO는 최고 기록 재도전, 최근 완주자는 PERFECT 기반 목표 또는 최고 기록 재도전이다. 타이밍·30회·최고 기록 comparator·recent 저장 방식은 유지한다.
+- recent가 best보다 좋은 불일치는 목표를 숨기고 `landing_view`의 `revisit_prompt_issue=recent_ahead_of_best`로 식별한다. 정상 저장·복원 경로에서는 재현되지 않았다. 임의 데이터 복구나 초기화를 하지 않는다.
+- 기존 시작 버튼과 광고 gate를 그대로 사용한다. `landing_view`/홈 출발 `game_start`에 목표 유무·종류를 포함하고 결과 retry/다음 난이도 출발은 목표 전환으로 귀속하지 않는다. 외부 analytics 없음.
+- [이번 구현·검증 기록](docs/REVISIT_PROMPT_2026-10-16.md). **C1/C2 실기기 검증은 계속 보류**이며 [기존 체크리스트](docs/DEVICE_VALIDATION_V1.md)를 유지한다. 결과 공유 등 다음 기능은 자동 진행하지 않는다.
+
+# 이전 상태: 같은 난이도 최근 경기 1회 비교 (2026-10-16)
+
+- v1-product-loop-baseline 위에 최근 경기 비교만 추가. `boxing-survival-v1`에 선택적 `recentByDifficulty`를 저장하며 기존 최고 기록·비교 순서는 유지한다. 이전 v1 데이터에는 최근 기록이 없는 것으로 처리한다.
+- 실제 product game_end가 승인된 clear/knockout의 결과 확정 시 직전 최근 기록을 먼저 비교한 뒤 이번 기록으로 교체한다. 튜토리얼·중단·광고 실패·preview 가짜 경기는 최근 기록에 포함하지 않는다.
+- 결과에 직전 경기 변화, 내 기록에 최고/최근을 구분한다. `result_view`의 비교 유무·이전/현재 결과·비교 분류를 기존 roundId로 `retry_game_start`에 연결한다. 외부 전송 없음.
+- 검증 결과와 저장 호환성: [최근 경기 비교 구현 기록](docs/RECENT_COMPARISON_2026-10-16.md). 광고·death counter·lifecycle·튜토리얼·엔진 변경 없음.
+- **C1 focus/AppState 순서와 C2 reward 이후 dismissed 누락: 실기기 검증 보류.** 기존 체크리스트를 보존하며 1차 제품 루프 실기기 완료로 판정하지 않는다. 다음 기능은 별도 결정 후 진행한다.
+
+# 이전 기준: 2회 knockout 재도전 루프 (2026-10-15)
+
+- 기준 태그: `v1-product-loop-baseline` (로컬). [실기기 검증 체크리스트](docs/DEVICE_VALIDATION_V1.md)의 iOS/Android 실행은 아직 남아 있다. 2026-10-16 사용자 결정으로 실기기 게이트를 보류하고 최근 경기 비교만 먼저 진행한다. C1/C2 해결·실기기 통과를 의미하지 않는다.
 
 - 독립 검증 후 A1(재마운트 재도전 계측), A2(adapter 예외 격리), A3(챔피언 잽 STEP_IN 실패 설명)만 보완했다. [수정·검증 기록](docs/FIXES_A123_2026-10-15.md)을 참조한다. C1 lifecycle 순서/C2 dismissed 누락은 실기기 검증 대기이며 정책·튜토리얼 시간은 유지한다.
 - 최신 정책은 [PRODUCT_DECISIONS](docs/PRODUCT_DECISIONS.md)를 따른다. 아래 2026-10-14 및 이전 기록은 역사 자료이며 매 사망 광고 정책을 복구하지 않는다.

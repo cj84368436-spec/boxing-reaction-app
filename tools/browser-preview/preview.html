@@ -41,7 +41,8 @@
     .result-row { min-height:52px; padding:8px 0; display: grid; align-content: center; border-bottom: 1px solid #243b4d; }
     .result-attack { font-size: 10px; font-weight: 900; } .result-detail { margin-top: 2px; color: #8aa0b4; font-size: 8px; font-weight: 700; }
     .result-card button { flex-shrink:0; min-height:44px; border: 0; border-radius: 12px; color: white; font-weight: 700; cursor: pointer; }
-    #retry-button { background: #e5484d; min-height:48px; } #replay-seed-button,#mode-button { background: #243b4d; }
+    #retry-button { background: #b92e36; min-height:48px; } #replay-seed-button,#mode-button { background: #243b4d; }
+    #retry-button:active { background:#a5262e; } #retry-button:disabled { background:#533038; opacity:1; }
     .debug { min-height: 24px; display: flex; align-items: center; gap: 5px; color: #607a8f; font-size: 9px; }
     .debug[hidden] { display: none; }
     .debug input { width: 92px; padding: 4px 6px; border: 1px solid #35536b; border-radius: 6px; background: #102333; color: #dce8f1; }
@@ -139,6 +140,21 @@
   #level-options{display:flex;gap:6px}#level-options button{flex:1;min-height:38px;background:#233a4d;color:#dce8e2;border:0;border-radius:8px;font-weight:800}#level-options button.selected{background:#d4af66;color:#152629}#level-options button:disabled{opacity:.45}.record-card{padding:10px;background:#193532;border-radius:10px;margin:8px 0;color:#dce8e2}.record-card strong{color:#f3c969}.record-card p{font-size:12px;margin:5px 0}.record-card small{font-size:11px;line-height:16px;display:block}.progress{gap:2px;grid-template-columns:repeat(30,1fr)}#promote-button{background:#e4b658;color:#152628}#promote-button[hidden]{display:none}
 .secondary-actions{display:flex;gap:8px}.secondary-actions button{flex:1;min-width:0} @media(max-height:650px){#intro-card .intro-copy{justify-content:flex-start}#coach-intro .coach-line{font-size:15px;line-height:20px}#coach-intro{padding:4px 0}}
 #records-card{padding:0;gap:0;overflow:hidden}#records-card>.records-content{flex:1;min-height:0;flex-shrink:1;overflow:auto;padding:14px;margin:0}#records-card>.intro-actions{flex-shrink:0;margin:0;padding:12px;display:flex;flex-direction:column;gap:8px}#records-card .record-card{font-size:13px;line-height:20px}#records-card h3{color:#f3c969}
+
+.result-content{display:flex;flex-direction:column;gap:8px}
+.result-content>*{flex-shrink:0}
+#viral-header{display:flex;flex-direction:column;gap:4px}
+#result-brand{color:#9db0c1;font-size:11px;text-align:center}
+#result-headline{color:#d1deda;font-size:13px;font-weight:700;text-align:center}
+#result-title{font-size:44px;line-height:50px;font-weight:900;letter-spacing:0}
+#result-caption{color:#d1deda;font-size:12px;line-height:18px;text-align:center}
+#coach-result{color:#f4e9ce;font-size:14px;line-height:20px;padding:6px 0}
+#recent-comparison{border-left:2px solid #466b69;padding-left:8px;white-space:pre-line;color:#b8caca;font-size:12px;line-height:17px}
+#record-title{color:#b8caca;font-size:12px;line-height:17px}
+#nearby-goal{color:#f3c969;font-size:13px;line-height:19px;font-weight:700}
+#viral-prompt{color:#b8caca;font-size:12px;line-height:18px;text-align:center}
+#viral-header.is-clear #result-title,#viral-header.is-clear #result-headline,#record-title.is-best{color:#f3c969}
+#result-details>summary{min-height:44px;display:flex;align-items:center;justify-content:center;background:#233a4d;border-radius:12px;font-size:13px;cursor:pointer}
 </style>
   <link rel="preload" as="image" href="/src/app/assets/art/jab.png">
   <link rel="preload" as="image" href="/src/app/assets/art/uppercut.png">
@@ -172,7 +188,7 @@
           <p>30회 생존하면 클리어. 다섯 번 맞으면 다운됩니다.<br>가드는 두 번, 회피하면 한 칸 회복.<br>스트레이트는 뒤로 빠져도 닿아요.</p>
           <p>30회 버티면 다음 단계 해금. 챔피언에서 6버튼과 어퍼컷이 열립니다.</p>
           </div><div class="intro-actions">
-          <div id="level-options"></div><small id="personal-best"></small>
+          <div id="level-options"></div><small id="personal-best"></small><small id="revisit-prompt" style="white-space:pre-line" hidden></small>
           <button id="begin-button" disabled class="primary" type="button">입문 도전 시작</button>
           <button id="daily-button" disabled class="secondary" type="button">오늘의 코스 · 기록 보기</button>
           <small id="storage-note"></small><small>오늘의 코스는 같은 난이도·순서로 진행하며 익명 기록을 제출합니다.</small>
@@ -186,12 +202,27 @@
         </div>
         <div class="intro-card" id="pause-card" hidden><h2>잠시 쉬어갑니다</h2><p>멈춘 순간부터 이어집니다.<br>준비되면 계속하기를 눌러주세요.</p><button id="resume-button" class="primary" type="button">계속하기</button></div>
         <div class="result-card" id="result-card">
-          <div class="result-content"><div class="result-title" id="result-title" role="heading" aria-level="2" aria-live="polite">라운드 종료</div><p id="nearby-goal" class="rematch-title"></p><p id="result-strength"></p><p id="result-weakness"></p><div id="coach-result"></div><div class="record-card"><strong id="record-title"></strong><p id="record-detail"></p><p id="promotion-note"></p><small id="rank-note"></small></div><div class="rematch-focus"><strong id="rematch-title"></strong><p id="rematch-body"></p></div>
-          <div class="summary"><span id="summary-perfect" class="perfect"></span><span id="summary-safe" class="safe"></span><span id="summary-hit" class="hit"></span></div>
-          <details id="result-details"><summary>상세 기록 보기</summary><div id="result-list"></div></details></div>
-          <button id="promote-button" type="button" class="primary" hidden>다음 난이도 도전</button><button aria-label="다시 도전" id="retry-button" type="button"><span id="retry-label">다시 도전</span><small id="retry-note">같은 공격 순서 · 같은 속도</small></button>
-          <button id="replay-seed-button" type="button" hidden>같은 공격으로 다시</button>
-          <div class="secondary-actions"><button id="new-pattern-button" type="button" style="background:#243b4d">다른 패턴 도전</button><button id="mode-button" type="button">난이도 선택</button></div>
+          <div class="result-content">
+            <div id="viral-header">
+              <div id="result-brand"></div><div id="result-headline"></div>
+              <div class="result-title" id="result-title" role="heading" aria-level="2" aria-live="polite">라운드 종료</div>
+              <div id="result-caption"></div><div id="coach-result"></div>
+              <div id="recent-comparison" hidden></div><div id="record-title"></div><div id="nearby-goal"></div>
+            </div>
+            <button aria-label="다시 도전" id="retry-button" type="button"><span id="retry-label">다시 도전</span><small id="retry-note">같은 공격 순서 · 같은 속도</small></button>
+            <div id="viral-prompt"></div><button id="share-result-button" type="button" class="secondary">친구에게 기록 보내기</button><small id="share-note" aria-live="polite" hidden></small>
+            <p id="promote-ad-disclosure" class="small-print" hidden>이동할 때 광고가 표시될 수 있어요.</p>
+            <button aria-describedby="promote-ad-disclosure" id="promote-button" type="button" class="primary" hidden>다음 난이도 도전</button>
+            <div class="secondary-actions"><button id="new-pattern-button" type="button" style="background:#243b4d">다른 패턴 도전</button><button id="mode-button" type="button">난이도 선택</button></div>
+            <button id="replay-seed-button" type="button" hidden>같은 공격으로 다시</button>
+            <details id="result-details"><summary>상세 기록 보기</summary>
+              <p id="result-strength"></p><p id="result-weakness"></p>
+              <div class="record-card"><p id="record-detail"></p><p id="promotion-note"></p><small id="rank-note"></small></div>
+              <div class="rematch-focus"><strong id="rematch-title"></strong><p id="rematch-body"></p></div>
+              <div class="summary"><span id="summary-perfect" class="perfect"></span><span id="summary-safe" class="safe"></span><span id="summary-hit" class="hit"></span></div>
+              <div id="result-list"></div>
+            </details>
+          </div>
         </div>
       </div>
       <div class="debug"><label for="seed-input">SEED</label><input id="seed-input" type="number" inputmode="numeric"><button id="start-seed-button" type="button">START SEED</button><span id="instance"></span></div>

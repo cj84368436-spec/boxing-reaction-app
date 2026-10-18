@@ -1,3 +1,4 @@
+import {entrySourceValue, type EntrySource} from './entrySource.js';
 import {ProductEvents, type EventData, type ProductEventName} from './productEvents.js';
 export type RoundEndReason = 'clear' | 'knockout';
 export type FullScreenKind = 'rewarded' | 'interstitial';
@@ -10,11 +11,22 @@ let nextRuntime = 0;
 /** Memory only: survives screen remounts, never writes player progress. */
 export class PlayRuntime {
   private readonly runtimeId = `runtime-${Date.now()}-${++nextRuntime}`;
-  constructor(readonly events = new ProductEvents()) {this.track('app_open');}
+  private initialSource: EntrySource | null = null;
+  constructor(readonly events = new ProductEvents(), source: EntrySource | null = 'unknown') {
+    if (source !== null) this.initializeEntrySource(source);
+  }
+  get entrySource(): EntrySource { return this.initialSource ?? 'unknown'; }
+  /** Native singleton defers app_open until the initial URI has been read, before rendering. */
+  initializeEntrySource(source: EntrySource): void {
+    if (this.initialSource !== null) return;
+    this.initialSource = entrySourceValue(source);
+    this.track('app_open');
+  }
   private analyticsFailures = 0;
   get analyticsFailureCount(): number { return this.analyticsFailures; }
   track(name:ProductEventName,data:EventData={}):void {
-    try {this.events.record(name,{...data,runtimeId:this.runtimeId,deathsSinceLastAd:this.deaths});}
+    if (this.initialSource === null) this.initializeEntrySource('unknown');
+    try {this.events.record(name,{...data,entry_source:this.entrySource,runtimeId:this.runtimeId,deathsSinceLastAd:this.deaths});}
     catch {this.analyticsFailures++;} // Synchronous adapter failures must never block play.
   }
   private sequence = 0;
@@ -53,12 +65,12 @@ export class PlayRuntime {
     if(retry)this.track('retry_game_start',event);
     return round;
   }
-  endRound(round: ProductRound, reason: RoundEndReason): boolean {
+  endRound(round: ProductRound, reason: RoundEndReason, metrics:EventData={}): boolean {
     if (!this.rounds.has(round) || this.ended.has(round)) return false;
     this.ended.add(round);
     this.lastCompletedRoundId = round.id;
     if (reason === 'knockout') this.deaths = Math.min(2, this.deaths + 1);
-    this.track('game_end',{roundId:round.id,reason});
+    this.track('game_end',{...metrics,roundId:round.id,reason});
     this.notify();
     return true;
   }
@@ -82,4 +94,4 @@ export class PlayRuntime {
   private notify(): void { for (const listener of this.listeners) listener(); }
 }
 
-export const playRuntime = new PlayRuntime();
+export const playRuntime = new PlayRuntime(new ProductEvents(), null);

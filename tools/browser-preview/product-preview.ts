@@ -1,3 +1,5 @@
+// Pure mapper + mock transport only; native Analytics bootstrap is not bundled.
+export {createAppsAnalyticsAdapter} from '../../src/app/analytics/appsAnalyticsAdapter';
 // Explicit QA-only native port. No SDK/advertising network is used here.
 import {RewardedRetryAdController,type FullScreenAdPort} from '../../src/app/ads/rewardedRetryAd';
 import {StageInterstitialAdController} from '../../src/app/ads/stageInterstitialAd';

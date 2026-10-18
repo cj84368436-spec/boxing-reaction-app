@@ -18,3 +18,8 @@ test('uses distinct product rounds and emits one end for each actual round',()=>
  expect(retries).toHaveLength(1);expect(retries[0]!.data.previousRoundId).toBe(first.id);
  expect(events.snapshot().filter(e=>e.name==='app_open')).toHaveLength(1);
 });
+test('async observer rejection is isolated and cannot mutate the bounded journal',async()=>{
+ const events=new ProductEvents(async event=>{(event.data as Record<string,unknown>).seed='mutated';throw Error('rejected');});
+ events.record('game_start',{level:1});await Promise.resolve();await Promise.resolve();
+ expect(events.observerFailureCount).toBe(1);expect(events.snapshot()[0]!.data).toEqual({level:1});
+});

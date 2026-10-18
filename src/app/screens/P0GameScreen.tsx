@@ -1,3 +1,10 @@
+import {buildResultFacts} from '../product/resultFacts';
+import {ViralResultHeader} from '../components/ViralResultHeader';
+import {buildViralResultPresentation} from '../product/viralResultPresentation';
+import {ResultShareButton} from '../components/ResultShareButton';
+import {buildRevisitPrompt,revisitPromptEventData} from '../product/revisitPrompt';
+import {buildRecentComparison,recentComparisonEventData,type RecentComparison} from '../product/recentComparison';
+import {isCompletedRecentRecord,recordRecentRound,recentRecordText} from '../product/recentRecords';
 import {DefenseTutorial} from '../components/DefenseTutorial';
 import {resultSummary} from '../product/resultSummary';
 import {attackLabel} from '../motion/attackNames';
@@ -6,7 +13,7 @@ import {InlineAd, Storage} from '@apps-in-toss/framework';
 import {IOScrollView} from '@granite-js/react-native';
 import {ART_SOURCES} from '../assets/artSources';
 import { LEVELS, SURVIVAL_PUNCHES, type Level } from '../session/survivalRules';
-import { emptyProgress, parseProgressWithStatus, recordRound, summarizeRound, recordText, compareRecords, earnsPromotion, isHighScore, type RoundRecord } from '../session/progression';
+import { emptyProgress, parseProgressWithStatus, recordRound, summarizeRound, recordText, earnsPromotion, isHighScore, type RoundRecord } from '../session/progression';
 import { startChallenge, submitChallenge, standingText, readCompetition, overviewText, type Challenge, type CompetitionInput } from '../session/competitionClient';
 import { useSafeAreaInsets } from '@granite-js/native/react-native-safe-area-context';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -170,6 +177,7 @@ export function P0GameScreen({
   const [level,setLevel]=useState<Level>(1);
   const [progress,setProgress]=useState(emptyProgress);
   const progressRef=useRef(progress);
+  const revisitPrompt=useMemo(()=>buildRevisitPrompt({recent:progress.recentByDifficulty?.[level],best:progress.best[level],difficulty:level,unlocked:progress.unlocked}),[progress,level]);
   const storageWritableRef=useRef(false);
   const [loaded,setLoaded]=useState(false);
   const [storageNote,setStorageNote]=useState('');
@@ -195,6 +203,8 @@ export function P0GameScreen({
   const challengeRef=useRef<Challenge|undefined>(undefined);
   const inputsRef=useRef<CompetitionInput[]>([]);
   const savedRound=useRef<string|undefined>(undefined);
+  const completedProductRoundRef=useRef<string|undefined>(undefined);
+  const [recentComparison,setRecentComparison]=useState<RecentComparison|null>(null);
   useEffect(()=>{
     let active=true;
     const timeout=setTimeout(()=>{
@@ -233,7 +243,10 @@ export function P0GameScreen({
   resultsReadyRef.current = showResults;
   useEffect(() => {
     if (started && snapshot.sessionCompleted && productRoundRef.current) {
-      runtime.endRound(productRoundRef.current, snapshot.knockedOut ? 'knockout' : 'clear');
+      const record=summarizeRound(snapshot,level,speed);
+      if(runtime.endRound(productRoundRef.current, snapshot.knockedOut ? 'knockout' : 'clear', {level,survived:record.survived,perfect:record.perfect})) {
+        completedProductRoundRef.current=productRoundRef.current.id;
+      }
     }
   }, [runtime, started, snapshot.sessionCompleted, snapshot.knockedOut]);
   useEffect(() => {
@@ -295,16 +308,19 @@ export function P0GameScreen({
     if ((!loaded || connecting) && !challenge) return;
     if (startedRef.current && !sessionRef.current.snapshot().sessionCompleted) return;
     if(!challenge && selected>progress.unlocked)return;
+    const revisitData=revisitPromptEventData(!startedRef.current&&!recordsOpen&&!challenge
+      ? buildRevisitPrompt({recent:progress.recentByDifficulty?.[selected],best:progress.best[selected],difficulty:selected,unlocked:progress.unlocked}):undefined);
     requestVersion.current++;setRecordsOpen(false);setDetailsOpen(false);
     const rate=LEVELS[selected].rate;
     startedRef.current=true; pausedRef.current=false; resultsReadyRef.current=false;
     challengeRef.current=challenge; inputsRef.current=[]; savedRound.current=undefined;
+    completedProductRoundRef.current=undefined;setRecentComparison(null);
     setRankNote(challenge?'오늘의 동일 코스 · 종료 후 기록 비교':'');
     dialogue.current.beginRound(); acceptedAt.current.clear(); setNotice(null);setPaused(false);
     clockRef.current.start(rate);setSpeed(rate);setLevel(selected);
     sessionRef.current=new P0TenPunchSession(clockRef.current,getSurvivalMotionSourceIds(),{ruleset:'candidate',maxHits:5,survivalLevel:selected,...(roundSeed==null?{}:{seed:roundSeed})});
     sessionRef.current.start({leadInMs:challenge?.leadInMs??readyLeadInMs*rate});
-    productRoundRef.current = runtime.startRound({level:selected,source});
+    productRoundRef.current = runtime.startRound({level:selected,source,...revisitData});
     setStarted(true);setSnapshot(sessionRef.current.tick());
   };
   const beginDaily=async()=>{
@@ -401,16 +417,23 @@ export function P0GameScreen({
   };
   const retryAdPressable = !waitingForForeground && stageAdState.phase !== 'showing' &&
     (!retryRequired || retryAdState.phase === 'ready' || retryAdState.phase === 'error');
-  const retryAdLabel = !retryRequired ? '다시 도전' : retryAdState.phase === 'ready' ? '광고 보고 다시 도전' : retryAdState.phase === 'error' ? retryAdState.actionLabel ?? '광고 다시 불러오기' : retryAdState.phase === 'showing' ? '광고 재생 중…' : retryAdState.phase === 'unsupported' ? 'QR에서 광고 테스트' : '광고 준비 중…';
-  useEffect(()=>{if(loaded&&!started&&!recordsOpen&&tutorialLevel===null)runtime.track('landing_view');},[runtime,loaded,started,recordsOpen,tutorialLevel]);
+  const stageAdDisclosure = !snapshot.knockedOut && (stageAdState.phase === 'loading' || stageAdState.phase === 'ready')
+    ? '이동할 때 광고가 표시될 수 있어요.' : undefined;
+  const retryAdLabel = !retryRequired ? '다시 도전' : retryAdState.phase === 'ready' ? '광고 보고 다시 도전' : retryAdState.phase === 'error' ? retryAdState.actionLabel ?? '광고 다시 불러오기' : retryAdState.phase === 'showing' ? '광고 재생 중…' : retryAdState.phase === 'unsupported' ? '광고 이용 불가' : '광고 준비 중…';
+  useEffect(()=>{if(loaded&&!started&&!recordsOpen&&tutorialLevel===null)runtime.track('landing_view',{level,...revisitPromptEventData(revisitPrompt)});},[runtime,loaded,started,recordsOpen,tutorialLevel,level,revisitPrompt]);
   useEffect(()=>{if(tutorialLevel!==null)runtime.track('tutorial_start');},[runtime,tutorialLevel]);
   const roundRecord=useMemo(()=>summarizeRound(snapshot,level,speed),[snapshot,level,speed]);
   const summary = resultSummary(roundRecord, snapshot.results);
+  const viral=buildViralResultPresentation({record:roundRecord,previousBest,comparison:recentComparison,results:snapshot.results});
   useEffect(()=>{
     if(!showResults||savedRound.current===snapshot.runId)return;
-    runtime.track('result_view',{roundId:productRoundRef.current?.id??null,level});
     savedRound.current=snapshot.runId;const base=progressRef.current;setPreviousBest(base.best[level]);
-    const next=recordRound(base,roundRecord);progressRef.current=next;setProgress(next);
+    const recentEligible=productRoundRef.current!==undefined&&completedProductRoundRef.current===productRoundRef.current.id&&isCompletedRecentRecord(roundRecord,level);
+    const comparison=recentEligible?buildRecentComparison(base.recentByDifficulty?.[level],roundRecord):null;
+    setRecentComparison(comparison);
+    runtime.track('result_view',{roundId:productRoundRef.current?.id??null,level,...recentComparisonEventData(comparison,roundRecord),survived:roundRecord.survived,perfect:roundRecord.perfect,is_personal_best:buildResultFacts({record:roundRecord,previousBest:base.best[level]})?.isPersonalBest??false});
+    const bestUpdated=recordRound(base,roundRecord);
+    const next=recentEligible?recordRecentRound(bestUpdated,roundRecord):bestUpdated;progressRef.current=next;setProgress(next);
     if(loaded&&storageWritableRef.current)void enqueueProgressWrite(JSON.stringify(next)).catch(()=>setStorageNote('기록 저장 실패 · 이번 실행에서는 유지됩니다.'));
     const challenge=challengeRef.current;
     if(challenge && competitionBaseUrl)void submitChallenge(challenge,inputsRef.current,competitionBaseUrl).then(r=>{if(challengeRef.current===challenge)setRankNote(standingText(r));}).catch(()=>{if(challengeRef.current===challenge)setRankNote('온라인 기록 제출 실패 · 개인 기록은 유지됩니다.');});
@@ -500,6 +523,7 @@ export function P0GameScreen({
           <View style={styles.introActions}>
             <View style={{flexDirection:'row',gap:6}}>{([1,2,3] as const).map(item=><Pressable key={item} accessibilityRole="button" accessibilityLabel={LEVELS[item].name} disabled={!loaded||item>progress.unlocked} onPress={()=>setLevel(item)} style={[styles.levelButton,{backgroundColor:item===level?'#D4AF66':'#233A4D',opacity:item>progress.unlocked?.45:1}]}><Text style={{color:item===level?'#14262A':'#E2E9E5',fontWeight:'800'}}>{item>progress.unlocked?'🔒 ':''}{LEVELS[item].name}</Text></Pressable>)}</View>
             <Text style={styles.smallPrint}>{recordText(progress.best[level])} · 연속 최고 {progress.bestStreak[level]??0}</Text>
+            {loaded&&revisitPrompt.message!==null?<Text testID="revisit-prompt" accessibilityLiveRegion="polite" style={styles.smallPrint}>{revisitPrompt.context}{"\n"}{revisitPrompt.message}</Text>:null}
             <Pressable accessibilityRole="button" accessibilityLabel="도전 시작" accessibilityHint={retryRequired?'광고 시청 후 다시 도전할 수 있어요.':undefined} disabled={!loaded||connecting||(retryRequired&&!retryAdPressable)} style={styles.beginButton} onPress={()=>requestBegin(level)}><Text style={styles.beginText}>{!loaded?'기록 불러오는 중':retryRequired?(retryAdState.phase==='ready'?'광고 보고 '+LEVELS[level].name+' 도전':retryAdLabel):LEVELS[level].name+' 도전 시작'}</Text></Pressable>
             {retryRequired?<Text accessibilityLiveRegion="polite" style={styles.smallPrint}>{retryAdState.message||'광고 시청 후 다시 도전할 수 있어요.'}</Text>:null}
             <Pressable accessibilityRole="button" accessibilityLabel="내 기록 보기" disabled={connecting||!loaded} style={styles.replayButton} onPress={()=>void openRecords()}><Text style={styles.replayText}>내 기록 보기</Text></Pressable>
@@ -510,7 +534,7 @@ export function P0GameScreen({
         {recordsOpen ? <View style={styles.introCard} accessibilityViewIsModal>
           <IOScrollView contentContainerStyle={styles.introContent}>
             <Text accessibilityRole="header" style={styles.introTitle}>내 기록</Text>
-            {([1,2,3] as const).map(n=><View key={n} style={styles.recordCard}><Text style={styles.rematchTitle}>{LEVELS[n].name}</Text><Text style={styles.rematchBody}>{recordText(progress.best[n])} · 연속 최고 {progress.bestStreak[n]??0}</Text></View>)}
+            {([1,2,3] as const).map(n=><View key={n} style={styles.recordCard}><Text style={styles.rematchTitle}>{LEVELS[n].name}</Text><Text testID={`best-record-${n}`} style={styles.rematchBody}>개인 최고 · {recordText(progress.best[n])} · 연속 최고 {progress.bestStreak[n]??0}</Text><Text testID={`recent-record-${n}`} style={styles.rematchBody}>최근 · {recentRecordText(progress.recentByDifficulty?.[n])}</Text></View>)}
             {competitionBaseUrl ? <>
               <Text style={styles.rematchTitle}>오늘의 코스</Text><Text style={styles.introBody}>모두 같은 도전자 난이도와 공격 순서로 겨룹니다.</Text>
               <Text accessibilityLiveRegion="polite" style={styles.smallPrint}>{recordsNote}</Text>
@@ -530,51 +554,29 @@ export function P0GameScreen({
         {showResults ? (
           <View style={styles.resultCard}>
             <ScrollView style={styles.resultList} contentContainerStyle={styles.resultContent}>
-            <Text accessibilityRole="header" accessibilityLiveRegion="polite" style={styles.resultHeading}>{snapshot.knockedOut ? `다운 · ${roundRecord.survived} / 30 생존` : `클리어 · 목숨 ${roundRecord.lives}개`}</Text>
-            <Text style={styles.rematchTitle}>{summary.goal}</Text>
-            {summary.strength ? <Text style={styles.rematchBody}>{summary.strength}</Text> : null}
-            {summary.weakness ? <Text style={styles.rematchBody}>{summary.weakness}</Text> : null}
-            <CoachReaction compact={compact} reaction={{...rematch.reaction, note:snapshot.knockedOut ? `${rematch.focusTitle}. ${rematch.focusBody}` : rematch.reaction.note}} />
-            <View style={styles.recordCard}>
-              <Text style={styles.rematchTitle}>{!previousBest?'첫 기록을 남겼어요':compareRecords(roundRecord,previousBest)<0?'새로운 최고 기록!':recordText(previousBest)}</Text>
-              <Text style={styles.rematchBody}>완벽 회피 {roundRecord.perfect}/30 · 최장 연속 {roundRecord.streak}회{isHighScore(roundRecord)?' · 관장의 인정 달성!':''}</Text>
-              <Text style={styles.rematchBody}>{earnsPromotion(roundRecord)?level<3?LEVELS[(level+1) as Level].name+' 단계 해금!':'최고 단계 클리어!':'같은 공격 순서로 다시 연습할 수 있어요'}</Text>
-              <Text style={styles.smallPrint}>{rankNote||storageNote||'난이도별 최고 기록은 이 기기에 저장됩니다.'}</Text>
-            </View>
-            <View testID="rematch-focus" style={styles.rematchFocus}>
-              <Text style={styles.rematchTitle}>{rematch.focusTitle}</Text>
-              <Text style={styles.rematchBody}>{rematch.focusBody}</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text testID="summary-perfect" style={styles.textPerfect}>완벽 회피 {counts.PERFECT}</Text>
-              <Text testID="summary-safe" style={styles.textSafe}>안전 방어 {counts.SAFE}</Text>
-              <Text testID="summary-hit" style={styles.textHit}>피격 {counts.HIT}</Text>
-            </View>
-              <Pressable accessibilityRole="button" accessibilityLabel={detailsOpen ? '상세 기록 접기' : '상세 기록 보기'} accessibilityState={{expanded:detailsOpen}} onPress={() => setDetailsOpen(value => !value)} style={styles.replayButton}><Text style={styles.replayText}>{detailsOpen ? '상세 기록 접기' : '상세 기록 보기'}</Text></Pressable>
-              {detailsOpen && snapshot.results.map((result) => (
-                <View key={result.attackInstanceId} testID={`result-${result.attackIndex}`} style={styles.resultRow}>
-                  <Text style={[styles.resultAttack, result.outcome === 'PERFECT' ? styles.textPerfect : result.outcome === 'SAFE' ? styles.textSafe : styles.textHit]}>#{result.attackIndex + 1} {attackLabel(result.attackId)}</Text>
-                  <Text style={styles.resultDetail}>
-                    {resultDescription(result)}{debugMode ? ` · ${result.telemetry.inputStatus} · ${result.telemetry.reactionMs == null ? '—' : Math.round(result.telemetry.reactionMs / speed)} ms` : ''}
-                  </Text>
-                </View>
-              ))}
-            </ScrollView>
-            {!challengeRef.current && level<3 && progress.unlocked>level ? <Pressable accessibilityRole="button" accessibilityLabel={retryRequired ? "광고 보고 다음 난이도 도전" : "다음 난이도 도전"} disabled={waitingForForeground || stageAdState.phase === 'showing' || (retryRequired && !retryAdPressable)} style={[styles.beginButton,stageAdState.phase === 'showing'&&{opacity:.55}]} onPress={handleNextLevel}><Text style={styles.beginText}>{stageAdState.phase === 'showing'?'광고 재생 중…':`${retryRequired ? "광고 보고 " : ""}다음 난이도 도전 · ${LEVELS[(level+1) as Level].name}`}</Text></Pressable>:null}
-            {stageAdState.message && !challengeRef.current && level<3 && progress.unlocked>level ? <Text accessibilityLiveRegion="polite" style={styles.smallPrint}>{stageAdState.message}</Text> : null}
+            {viral?<ViralResultHeader presentation={viral}/>:null}
             <Pressable
               accessibilityLabel={retryAdLabel}
               accessibilityHint={retryRequired ? "광고 시청 후 다시 도전할 수 있어요." : undefined}
               accessibilityRole="button"
               disabled={!retryAdPressable}
               onPress={() => handleRewardedRetry(rematch.replaySameSeed ? snapshot.seed : (snapshot.seed + 1) >>> 0)}
-              style={({ pressed }) => [styles.retryButton, !retryAdPressable && {opacity: 0.55}, pressed && styles.retryPressed]}
+              style={({ pressed }) => [styles.retryButton, !retryAdPressable && styles.retryDisabled, retryAdPressable && pressed && styles.retryPressed]}
             >
               <Text style={styles.retryText}>{retryAdLabel}</Text>
               <Text style={styles.rematchNote}>{challengeRef.current ? '오늘의 같은 코스에 다시 도전합니다.' : rematch.retryNote}</Text>
             </Pressable>
             {retryRequired ? <><Text style={styles.adDisclosure}>광고 시청 후 다시 도전할 수 있어요.</Text><Text accessibilityLiveRegion="polite" style={styles.smallPrint}>{retryAdState.message}</Text></> : null}
+            {retryRequired && retryAdState.phase === 'unsupported' ? <Text style={styles.smallPrint}>난이도 선택으로 돌아가 내 기록을 확인할 수 있어요.</Text> : null}
             {waitingForForeground ? <Text accessibilityLiveRegion="polite" style={styles.smallPrint}>돌아오면 준비 후 바로 시작합니다.</Text> : null}
+            {storageNote||rankNote?<Text accessibilityLiveRegion="polite" style={styles.smallPrint}>{rankNote||storageNote}</Text>:null}
+            {viral?<Text style={styles.viralPrompt}>{viral.viralPrompt}</Text>:null}
+            {productRoundRef.current?<ResultShareButton record={roundRecord} previousBest={previousBest} comparison={recentComparison} roundId={productRoundRef.current.id} runtime={runtime}
+              disabled={waitingForForeground||runtime.fullScreenBusy}
+              isCurrent={()=>resultsReadyRef.current&&!runtime.fullScreenBusy&&productRoundRef.current?.id===completedProductRoundRef.current}/>:null}
+            {!challengeRef.current && level<3 && progress.unlocked>level && stageAdDisclosure ? <Text style={styles.adDisclosure}>{stageAdDisclosure}</Text> : null}
+            {!challengeRef.current && level<3 && progress.unlocked>level ? <Pressable accessibilityRole="button" accessibilityLabel={retryRequired ? "광고 보고 다음 난이도 도전" : "다음 난이도 도전"} accessibilityHint={retryRequired ? "광고 시청 후 다음 난이도에 도전할 수 있어요." : stageAdDisclosure} disabled={waitingForForeground || stageAdState.phase === 'showing' || (retryRequired && !retryAdPressable)} style={[styles.beginButton,stageAdState.phase === 'showing'&&{opacity:.55}]} onPress={handleNextLevel}><Text style={styles.beginText}>{stageAdState.phase === 'showing'?'광고 재생 중…':`${retryRequired ? "광고 보고 " : ""}다음 난이도 도전 · ${LEVELS[(level+1) as Level].name}`}</Text></Pressable>:null}
+            {stageAdState.message && !challengeRef.current && level<3 && progress.unlocked>level ? <Text accessibilityLiveRegion="polite" style={styles.smallPrint}>{stageAdState.message}</Text> : null}
             <View style={{flexDirection:'row',gap:8}}>{!challengeRef.current ? <Pressable accessibilityLabel={retryRequired ? "광고 보고 다른 패턴 도전" : "다른 패턴 도전"} accessibilityRole="button" disabled={!retryAdPressable} style={[styles.replayButton,{flex:1},!retryAdPressable&&{opacity:0.55}]} onPress={() => handleRewardedRetry((snapshot.seed + 1) >>> 0)}><Text style={styles.replayText}>{retryRequired ? "광고 보고 다른 패턴" : "다른 패턴"}</Text></Pressable>:null}
             <Pressable accessibilityLabel="난이도 선택" accessibilityRole="button" disabled={waitingForForeground||retryAdState.phase==='showing'||stageAdState.phase==='showing'} style={[styles.replayButton,{flex:1}]} onPress={() => {
               if(adLeaseRef.current){
@@ -598,6 +600,34 @@ export function P0GameScreen({
                 <Text style={styles.replayText}>같은 공격으로 다시</Text>
               </Pressable>
             ) : null}
+              <Pressable accessibilityRole="button" accessibilityLabel={detailsOpen ? '상세 기록 접기' : '상세 기록 보기'} accessibilityState={{expanded:detailsOpen}} onPress={() => setDetailsOpen(value => !value)} style={styles.replayButton}><Text style={styles.replayText}>{detailsOpen ? '상세 기록 접기' : '상세 기록 보기'}</Text></Pressable>
+            {detailsOpen?<View>
+            {summary.strength?<Text style={styles.rematchBody}>{summary.strength}</Text>:null}
+            {summary.weakness?<Text style={styles.rematchBody}>{summary.weakness}</Text>:null}
+            <View style={styles.recordCard}>
+              <Text style={styles.rematchBody}>완벽 회피 {roundRecord.perfect}/30 · 최장 연속 {roundRecord.streak}회{isHighScore(roundRecord)?' · 관장의 인정 달성!':''}</Text>
+              <Text style={styles.rematchBody}>{earnsPromotion(roundRecord)?level<3?LEVELS[(level+1) as Level].name+' 단계 해금!':'최고 단계 클리어!':'같은 공격 순서로 다시 연습할 수 있어요'}</Text>
+              {!rankNote&&!storageNote?<Text style={styles.smallPrint}>난이도별 최고 기록은 이 기기에 저장됩니다.</Text>:null}
+            </View>
+            <View testID="rematch-focus" style={styles.rematchFocus}>
+              <Text style={styles.rematchTitle}>{rematch.focusTitle}</Text>
+              <Text style={styles.rematchBody}>{rematch.focusBody}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text testID="summary-perfect" style={styles.textPerfect}>완벽 회피 {counts.PERFECT}</Text>
+              <Text testID="summary-safe" style={styles.textSafe}>안전 방어 {counts.SAFE}</Text>
+              <Text testID="summary-hit" style={styles.textHit}>피격 {counts.HIT}</Text>
+            </View>
+              {snapshot.results.map((result) => (
+                <View key={result.attackInstanceId} testID={`result-${result.attackIndex}`} style={styles.resultRow}>
+                  <Text style={[styles.resultAttack, result.outcome === 'PERFECT' ? styles.textPerfect : result.outcome === 'SAFE' ? styles.textSafe : styles.textHit]}>#{result.attackIndex + 1} {attackLabel(result.attackId)}</Text>
+                  <Text style={styles.resultDetail}>
+                    {resultDescription(result)}{debugMode ? ` · ${result.telemetry.inputStatus} · ${result.telemetry.reactionMs == null ? '—' : Math.round(result.telemetry.reactionMs / speed)} ms` : ''}
+                  </Text>
+                </View>
+              ))}
+            </View>:null}
+            </ScrollView>
           </View>
         ) : null}
 
@@ -642,7 +672,7 @@ const styles = StyleSheet.create({
   hudTitle: { flex: 1, paddingRight: 8 },
   soundButton: { minHeight: 44, minWidth: 72, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: '#172A3A' },
   soundText: { color: '#DCE8F1', fontSize: 12, fontWeight: '700' },
-  resultContent: { paddingBottom: 10 },
+  resultContent: { paddingBottom: 10, gap: 8 },
   introCard: { ...StyleSheet.absoluteFillObject, zIndex: 12, backgroundColor: 'rgba(7,20,23,0.68)' },
   introEyebrow: { color: '#F3C969', fontSize: 10, letterSpacing: 2, fontWeight: '800' },
   introTitle: { color: '#FFFFFF', fontSize: 25, lineHeight: 32, fontWeight: '800' },
@@ -686,17 +716,18 @@ const styles = StyleSheet.create({
   cornerRight: { position: 'absolute', right: 12, top: '16%', bottom: '12%', width: 10, borderRadius: 8, backgroundColor: '#273E51' },
   ceilingGlow: { position: 'absolute', top: -90, width: 260, height: 180, borderRadius: 130, backgroundColor: 'rgba(245, 217, 164, 0.13)' },
   resultCard: { ...StyleSheet.absoluteFillObject, zIndex: 10, padding: 14, gap: 8, backgroundColor: '#07111B' },
-  resultHeading: { color: '#FFFFFF', fontSize: 17, fontWeight: '900', letterSpacing: 1, textAlign: 'center' },
+  viralPrompt: {color:'#B8CACA',fontSize:12,lineHeight:18,textAlign:'center'},
   summaryRow: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 8 },
   textPerfect: { color: '#56D68B', fontSize: 12, fontWeight: '800' },
   textSafe: { color: '#F3C969', fontSize: 12, fontWeight: '800' },
   textHit: { color: '#FF7A80', fontSize: 12, fontWeight: '800' },
-  resultList: { flex: 1, borderTopWidth: 1, borderTopColor: '#243B4D' },
+  resultList: { flex: 1 },
   resultRow: { minHeight: 52, paddingVertical: 8, justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: '#243B4D' },
   resultAttack: { color: '#DCE8F1', fontSize: 10, fontWeight: '900' },
   resultDetail: { marginTop: 3, color: '#AFBFCD', fontSize: 12, lineHeight: 18, fontWeight: '500' },
-  retryButton: { minHeight: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 12, backgroundColor: '#E5484D' },
-  retryPressed: { transform: [{ scale: 0.97 }], opacity: 0.88 },
+  retryButton: { minHeight: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 12, backgroundColor: '#B92E36' },
+  retryDisabled: { backgroundColor: '#533038' },
+  retryPressed: { transform: [{ scale: 0.97 }], backgroundColor: '#A5262E' },
   retryText: { color: '#FFFFFF', fontSize: 13, fontWeight: '900', letterSpacing: 1 },
   adDisclosure: { color: '#AFBFCD', fontSize: 11, lineHeight: 16, textAlign: 'center' },
   recordsAd: { marginTop: 16, marginBottom: 12 },

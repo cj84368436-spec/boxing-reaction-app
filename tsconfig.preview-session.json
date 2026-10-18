@@ -28,6 +28,11 @@
     "src/app/session/progression.ts",
     "src/app/session/competitionClient.ts",
     "src/app/product/playRuntime.ts",
-    "src/app/product/resultSummary.ts"
+    "src/app/product/resultSummary.ts",
+    "src/app/product/viralResultPresentation.ts",
+    "src/app/product/recentComparison.ts",
+    "src/app/product/revisitPrompt.ts",
+    "src/app/sharing/shareResult.ts",
+    "src/app/sharing/resultShareAdapter.ts"
   ]
 }

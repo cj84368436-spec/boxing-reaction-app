@@ -84,7 +84,7 @@ export class RewardedRetryAdController implements RewardedRetryAdGate {
     catch { this.events.emit('ad_fail','sdk');this.emit('error', '광고를 표시하지 못했습니다. 다시 눌러 주세요.'); return false; }
     if (!supported) {
       this.events.emit('ad_fail','unsupported');
-      this.emit('unsupported', '광고는 토스 앱의 QR 테스트에서 확인할 수 있습니다.');
+      this.emit('unsupported', '현재 이 환경에서는 광고를 이용할 수 없어요.');
       return false;
     }
 
@@ -174,7 +174,7 @@ export class RewardedRetryAdController implements RewardedRetryAdGate {
     catch { this.events.emit('ad_fail','sdk');this.emit('error', '광고를 불러오지 못했습니다. 다시 눌러 주세요.'); return; }
     if (!supported) {
       this.events.emit('ad_fail','unsupported');
-      this.emit('unsupported', '광고는 토스 앱의 QR 테스트에서 확인할 수 있습니다.');
+      this.emit('unsupported', '현재 이 환경에서는 광고를 이용할 수 없어요.');
       return;
     }
     this.emit('loading', message);

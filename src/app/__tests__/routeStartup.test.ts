@@ -28,6 +28,10 @@ describe('app route startup', () => {
     const config = getScreenPathMapConfig(getRouteScreens(context));
 
     expect(config['/']).toEqual({path: ''});
+    expect(config['/shared']).toEqual({path: '/shared'});
+    const {P0GameScreen}=require('../screens/P0GameScreen');
+    expect(require('../../../pages/_404').default).toBe(P0GameScreen);
+    expect(jest.requireActual(join(sdkDirectory,'src/router/createRoute')).routeMap.get('/shared').component).toBe(P0GameScreen);
     expect(config['/_404']).toEqual({path: '*'});
   });
 });

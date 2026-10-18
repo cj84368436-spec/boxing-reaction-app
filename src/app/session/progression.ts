@@ -1,7 +1,8 @@
 import type { TenPunchSessionSnapshot } from './P0TenPunchSession.js';
 import type { Level } from './survivalRules.js';
+import {isCompletedRecentRecord} from '../product/recentRecords.js';
 export interface RoundRecord {level:Level;cleared:boolean;resolved:number;survived:number;lives:number;perfect:number;streak:number;reactionMs:number|null;at:number}
-export interface Progress {version:1;unlocked:Level;best:Partial<Record<Level,RoundRecord>>;bestStreak:Partial<Record<Level,number>>}
+export interface Progress {version:1;unlocked:Level;best:Partial<Record<Level,RoundRecord>>;bestStreak:Partial<Record<Level,number>>;recentByDifficulty?:Partial<Record<Level,RoundRecord>>}
 export const emptyProgress=():Progress=>({version:1,unlocked:1,best:{},bestStreak:{}});
 export function summarizeRound(s:TenPunchSessionSnapshot,level:Level,rate:number,at=Date.now()):RoundRecord {
  let streak=0,best=0;const reactions:number[]=[];let perfect=0;
@@ -17,7 +18,7 @@ export function earnsPromotion(r:RoundRecord):boolean{return r.cleared && r.reso
 export function isHighScore(r:RoundRecord):boolean{return earnsPromotion(r)&&r.perfect>=24&&r.lives>=3;}
 export function recordRound(p:Progress,r:RoundRecord):Progress {
  const old=p.best[r.level];const next=earnsPromotion(r)?Math.min(3,r.level+1) as Level:p.unlocked;
- return {version:1,unlocked:Math.max(p.unlocked,next) as Level,best:{...p.best,[r.level]:!old||compareRecords(r,old)<0?r:old},bestStreak:{...p.bestStreak,[r.level]:Math.max(p.bestStreak[r.level]??0,r.streak)}};
+ return {version:1,unlocked:Math.max(p.unlocked,next) as Level,best:{...p.best,[r.level]:!old||compareRecords(r,old)<0?r:old},bestStreak:{...p.bestStreak,[r.level]:Math.max(p.bestStreak[r.level]??0,r.streak)},...(p.recentByDifficulty?{recentByDifficulty:p.recentByDifficulty}:{})};
 }
 export interface ProgressParseResult {progress:Progress;damaged:boolean}
 function isRoundRecord(value:unknown,level:Level):value is RoundRecord {
@@ -37,6 +38,18 @@ export function parseProgressWithStatus(raw:string|null):ProgressParseResult {
   if([1,2,3].includes(p.unlocked))out.unlocked=p.unlocked as Level;else damaged=true;
   if(p.best!=null&&typeof p.best!=='object')damaged=true;
   if(p.bestStreak!=null&&typeof p.bestStreak!=='object')damaged=true;
+  if(p.recentByDifficulty!==undefined){
+   if(p.recentByDifficulty===null||typeof p.recentByDifficulty!=='object'||Array.isArray(p.recentByDifficulty))damaged=true;
+   else {
+    out.recentByDifficulty={};
+    for(const level of [1,2,3] as const){
+     const recent=p.recentByDifficulty[level];
+     if(recent===undefined)continue;
+     if(isCompletedRecentRecord(recent,level))out.recentByDifficulty[level]=recent;
+     else damaged=true;
+    }
+   }
+  }
   for(const level of [1,2,3] as const){
    const record=p.best?.[level];
    if(record==null)continue;

@@ -26,3 +26,11 @@ test('does not finish in background and cancels pending work on unmount',()=>{
  view.rerender(<DefenseTutorial active onComplete={done}/>);
  view.unmount();act(()=>jest.advanceTimersByTime(10000));expect(done).not.toHaveBeenCalled();
 });
+test('completes LEFT then GUARD using only standard accessibility press activation',()=>{
+ const done=jest.fn();render(<DefenseTutorial active onComplete={done}/>);
+ fireEvent.press(screen.getByRole('button',{name:'← 왼쪽'}),{nativeEvent:{}});
+ act(()=>jest.advanceTimersByTime(2000));
+ expect(screen.getByText('이번에는 정면 공격 · 가드')).toBeTruthy();
+ fireEvent.press(screen.getByRole('button',{name:'가드'}),{nativeEvent:{}});
+ act(()=>jest.advanceTimersByTime(2000));expect(done).toHaveBeenCalledTimes(1);
+});

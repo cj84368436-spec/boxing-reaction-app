@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './GameText';
 import { controlsForLevel, type DefenseControlInput } from '../session/advancedDefense';
@@ -21,7 +21,8 @@ export function DefenseControls({
   onDefensePressOut,
 }: DefenseControlsProps) {
   const [activeButton, setActiveButton] = useState<DefenseControlInput | null>(null);
-  useEffect(() => { if (disabled) setActiveButton(null); }, [disabled]);
+  const held = useRef(new Set<DefenseControlInput>());
+  useEffect(() => { if (disabled) { held.current.clear(); setActiveButton(null); } }, [disabled]);
   const buttons = controlsForLevel(level);
 
   return (
@@ -34,15 +35,27 @@ export function DefenseControls({
             key={button}
             accessibilityLabel={LABELS[button]}
             accessibilityRole="button"
+            accessibilityHint="활성화하면 해당 방어 동작을 한 번 실행합니다."
             accessibilityState={{ disabled, selected }}
             disabled={disabled}
             onPressIn={() => {
+              held.current.add(button);
               setActiveButton(button);
               onDefensePressIn?.(button);
             }}
             onPressOut={() => {
+              held.current.delete(button);
               setActiveButton(null);
               onDefensePressOut?.(button);
+            }}
+            onPress={(event) => {
+              // RN 0.84 Pressability calls onPress on responder release AND onClick.
+              // NativeTouchEvent carries touches/changedTouches, including a delayed
+              // pressOut. Non-pointer accessibility clicks carry neither. Never replay
+              // a physical press here: its timing-sensitive input already ran onPressIn.
+              if (disabled || held.current.has(button) || event?.nativeEvent?.touches != null || event?.nativeEvent?.changedTouches != null) return;
+              try { onDefensePressIn?.(button); }
+              finally { setActiveButton(null); onDefensePressOut?.(button); }
             }}
             style={[styles.button, (button === "BACK" || button === "GUARD") && styles.blueButton, (button === 'DUCK' || button === 'STEP_IN') && styles.advancedButton, compact && styles.buttonCompact, selected && styles.buttonPressed, disabled && styles.buttonDisabled]}
           >

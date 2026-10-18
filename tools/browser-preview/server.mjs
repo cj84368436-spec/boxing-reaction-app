@@ -21,10 +21,17 @@ const LOOPBACK_HOST = '127.0.0.1';
 const EXACT_ROUTES = new Map([
   ['/qa-product.js', join(ROOT,'.preview-dist','qa-product.js')],
   ['/', join(__dirname, 'preview.html')],
+  // Explicit attribution fixtures only; no native deep-link simulation.
+  ['/shared', join(__dirname, 'preview.html')],
+  ['/__qa_unknown_entry', join(__dirname, 'preview.html')],
   ['/index.html', join(__dirname, 'preview.html')],
   ['/preview.html', join(__dirname, 'preview.html')],
   ['/preview-session.mjs', join(__dirname, 'preview-session.mjs')],
   ['/preview-client.mjs', join(__dirname, 'preview-client.mjs')],
+  ['/viral-result-preview.mjs', join(__dirname, 'viral-result-preview.mjs')],
+  ['/share-preview.mjs', join(__dirname, 'share-preview.mjs')],
+  ['/.preview-dist/app/sharing/shareResult.js', join(ROOT,'.preview-dist','app','sharing','shareResult.js')],
+  ['/.preview-dist/app/sharing/resultShareAdapter.js', join(ROOT,'.preview-dist','app','sharing','resultShareAdapter.js')],
 ]);
 
 const DIRECTORY_ROUTES = [

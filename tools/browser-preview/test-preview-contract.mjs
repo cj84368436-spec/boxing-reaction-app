@@ -120,3 +120,12 @@ test('all browser presentation modules remain available from the preview output'
   try { await check('/preview-client.mjs'); }
   finally { await new Promise(resolve => server.close(resolve)); }
 });
+
+
+test('share preview modules are explicitly served without exposing native adapters',async()=>{
+ const server=createPreviewServer();await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin='http://127.0.0.1:'+server.address().port;
+ try{
+  for(const path of ['/share-preview.mjs','/.preview-dist/app/sharing/shareResult.js','/.preview-dist/app/sharing/resultShareAdapter.js'])assert.equal((await fetch(origin+path)).status,200,path);
+  assert.equal((await fetch(origin+'/src/app/sharing/nativeResultShare.ts')).status,404);
+ }finally{await new Promise(r=>server.close(r));}
+});

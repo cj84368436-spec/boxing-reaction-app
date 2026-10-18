@@ -10,7 +10,7 @@ async function count(page){return page.evaluate(()=>window.__p0Preview.runtime.d
 async function clear(page,rate){
  await advance(page,16);const s=await page.evaluate(()=>window.__p0Preview.snapshot());let elapsed=16*rate;
  for(const a of s.scheduledAttacks){const t=a.attackStartScheduledAtMs+300;await advance(page,(t-elapsed)/rate);elapsed=t;await page.locator('[data-btn="'+(a.attackId==='LEAD_UPPERCUT_HEAD'?'BACK':a.attackId==='LEAD_HOOK_HEAD'?'RIGHT':'LEFT')+'"]').click();}
- await advance(page,1400/rate);assert.match(await page.locator('#result-title').innerText(),/클리어/);
+ await advance(page,1400/rate);assert.match(await page.locator('#result-caption').innerText(),/완주/);
 }
 try{
  for(const width of [320,390]){

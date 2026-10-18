@@ -1,13 +1,21 @@
+import {APP_ENTRY_URI, SHARED_ENTRY_URI, parseEntrySource} from '/.preview-dist/app/product/entrySource.js';
+import {renderViralResult} from './viral-result-preview.mjs';
+import {setPreviewShareContext} from './share-preview.mjs';
+import {buildRevisitPrompt,revisitPromptEventData} from '/.preview-dist/app/product/revisitPrompt.js';
+import {buildRecentComparison,recentComparisonEventData} from '/.preview-dist/app/product/recentComparison.js';
+import {recentRecordText} from '/.preview-dist/app/product/recentRecords.js';
 import {PlayRuntime} from '/.preview-dist/app/product/playRuntime.js';
 import {resultSummary} from '/.preview-dist/app/product/resultSummary.js';
 import {attackLabel} from '/.preview-dist/app/motion/attackNames.js';
-const productRuntime=new PlayRuntime();
-let productRound=null,qaAds=null,retryPhase='idle',pendingAdStart=null,adLease=null;
+// Explicit browser fixtures, not a real Toss HTTPS/native bridge round trip.
+const fixtureUri=location.pathname==='/shared'?SHARED_ENTRY_URI:location.pathname==='/__qa_unknown_entry'?APP_ENTRY_URI+'/unknown':APP_ENTRY_URI;
+const productRuntime=new PlayRuntime(undefined,parseEntrySource(fixtureUri));
+let productRound=null,qaAds=null,retryPhase='idle',stagePhase='idle',pendingAdStart=null,adLease=null;
 const qaAdMode=new URLSearchParams(location.search).get('qaAds')==='1';
 if(qaAdMode){const {createQaAds}=await import('/qa-product.js');qaAds=createQaAds((name,data)=>productRuntime.track(name,{...data,roundId:productRound?.id??null}));}
 function adThen(kind,run){
  if(adLease||pendingAdStart)return;
- if(!qaAds){if(kind==='interstitial')run();else byId('retry-note').textContent='실제 광고는 토스 QR에서 확인하세요. 모의 검증은 qaAds=1입니다.';return;}
+ if(!qaAds){if(kind==='interstitial')run();else byId('retry-note').textContent='현재 이 환경에서는 광고를 이용할 수 없어요. 난이도 선택으로 돌아가 내 기록을 확인할 수 있어요.';return;}
  const lease=productRuntime.acquireAd({},kind);if(!lease)return;adLease=lease;
  const complete=()=>{if(adLease!==lease)return;kind==='rewarded'?productRuntime.completeReward(lease):productRuntime.releaseAd(lease);adLease=null;if(document.hidden)pendingAdStart=run;else run();};
  const attempted=(kind==='rewarded'?qaAds.rewarded:qaAds.stage).attempt(complete);
@@ -22,7 +30,7 @@ function requestPlay(seed,rate,source='free_retry'){
  else start(seed,rate,null,source);
 }
 import { LEVELS } from '/.preview-dist/app/session/survivalRules.js';
-import { emptyProgress, parseProgress, recordRound, summarizeRound, recordText, compareRecords, earnsPromotion, isHighScore } from '/.preview-dist/app/session/progression.js';
+import { emptyProgress, parseProgress, recordRound, summarizeRound, recordText, earnsPromotion, isHighScore } from '/.preview-dist/app/session/progression.js';
 import { startChallenge, submitChallenge, standingText, readCompetition, overviewText } from '/.preview-dist/app/session/competitionClient.js';
 import { CoachDialogue } from '/.preview-dist/app/motion/coachDialogue.js';
 import { ART_ATLAS } from '/.preview-dist/app/motion/artAtlas.js';
@@ -43,16 +51,20 @@ const bars=[...progressRow.children];
 const STORAGE_KEY='boxing-survival-v1';
 let progress=emptyProgress(), storageNote='',level=1, challenge=null, inputs=[], connecting=false, ready=false, requestVersion=0;
 try{progress=parseProgress(localStorage.getItem(STORAGE_KEY));}catch{storageNote='기록 저장을 사용할 수 없습니다.';}
+function currentRevisitPrompt(){return buildRevisitPrompt({recent:progress.recentByDifficulty?.[level],best:progress.best[level],difficulty:level,unlocked:progress.unlocked});}
+function trackLanding(){if(ready&&!byId('intro-card').hidden)productRuntime.track('landing_view',{level,...revisitPromptEventData(currentRevisitPrompt())});}
 function renderLevels(){
  byId('level-options').replaceChildren(...[1,2,3].map(n=>{const b=document.createElement('button');b.type='button';b.textContent=(n>progress.unlocked?'🔒 ':'')+LEVELS[n].name;b.disabled=n>progress.unlocked;b.className=n===level?'selected':'';b.onclick=()=>{level=n;renderLevels();};return b;}));
  byId('begin-button').textContent=LEVELS[level].name+' 도전 시작';byId('personal-best').textContent=recordText(progress.best[level])+' · 연속 최고 '+(progress.bestStreak[level]??0);
+ const prompt=currentRevisitPrompt();byId('revisit-prompt').hidden=prompt.message===null;byId('revisit-prompt').textContent=prompt.message===null?'':prompt.context+'\n'+prompt.message;
+ trackLanding();
  byId('storage-note').textContent=storageNote||'30회를 버티면 다음 단계 해금';
 }
-function closeRecords(){requestVersion++;byId('records-card').hidden=true;byId('intro-card').hidden=false;focusButton('daily-button');}
+function closeRecords(){requestVersion++;byId('records-card').hidden=true;byId('intro-card').hidden=false;focusButton('daily-button');trackLanding();}
 async function openRecords(){
  if(!ready||connecting)return;
  const version=++requestVersion;
- byId('records-list').replaceChildren(...[1,2,3].map(n=>{const card=document.createElement('div');card.className='record-card';card.textContent=LEVELS[n].name+' · '+recordText(progress.best[n])+' · 연속 최고 '+(progress.bestStreak[n]??0);return card;}));
+ byId('records-list').replaceChildren(...[1,2,3].map(n=>{const card=document.createElement('div');card.className='record-card';card.textContent=LEVELS[n].name+' · 개인 최고 · '+recordText(progress.best[n])+' · 연속 최고 '+(progress.bestStreak[n]??0);const recent=document.createElement('p');recent.dataset.recentLevel=n;recent.textContent='최근 · '+recentRecordText(progress.recentByDifficulty?.[n]);card.append(recent);return card;}));
  byId('intro-card').hidden=true;byId('records-card').hidden=false;byId('records-standing').textContent='오늘의 기록 불러오는 중…';focusButton('records-close-button');
  try{const v=await readCompetition();if(version===requestVersion)byId('records-standing').textContent=overviewText(v);}catch{if(version===requestVersion)byId('records-standing').textContent='온라인 기록을 불러오지 못했습니다. 개인 기록은 위에서 볼 수 있습니다.';}
 }
@@ -182,20 +194,22 @@ function handleInput(input) {
 function showResults(snapshot) {
   const totals = { PERFECT: 0, SAFE: 0, HIT: 0 };
   productRuntime.endRound(productRound,snapshot.knockedOut?'knockout':'clear');
-  productRuntime.track('result_view',{roundId:productRound.id});
   if(productRuntime.requiresReward&&qaAds)qaAds.rewarded.prepare(state=>{retryPhase=state.phase;if(state.phase==='error'&&adLease){productRuntime.releaseAd(adLease);adLease=null;}byId('retry-label').textContent=state.phase==='ready'?'광고 보고 다시 도전':state.phase==='error'?'광고 다시 불러오기':'광고 준비 중…';});
   for (const result of snapshot.results) totals[result.outcome]++;
   for (const outcome of Object.keys(totals)) byId(`summary-${outcome.toLowerCase()}`).textContent = `${({PERFECT:'완벽 회피',SAFE:'안전 방어',HIT:'피격'})[outcome]} ${totals[outcome]}`;
   const record=summarizeRound(snapshot,level,speed),old=progress.best[level];
+  // Browser simulation can display a seeded recent record, but never becomes a real recent match.
+  const comparison=buildRecentComparison(progress.recentByDifficulty?.[level],record);
+  productRuntime.track('result_view',{roundId:productRound.id,level,...recentComparisonEventData(comparison,record)});
+  const sharedRoundId=productRound.id;setPreviewShareContext({record,previousBest:old,comparison,roundId:sharedRoundId,runtime:productRuntime,isCurrent:()=>showingResults&&productRound?.id===sharedRoundId&&!productRuntime.fullScreenBusy});
   const summary=resultSummary(record,snapshot.results);byId('nearby-goal').textContent=summary.goal;byId('result-strength').textContent=summary.strength??'';byId('result-weakness').textContent=summary.weakness??'';byId('result-details').open=false;
   progress=recordRound(progress,record);
   try{localStorage.setItem(STORAGE_KEY,JSON.stringify(progress));}catch{storageNote='기록 저장 실패 · 이번 실행에서는 유지됩니다.';}
-  byId('result-title').textContent=snapshot.knockedOut?'다운 · '+record.survived+' / 30 생존':'클리어 · 목숨 '+record.lives+'개';
-  byId('record-title').textContent=!old?'첫 기록을 남겼어요':compareRecords(record,old)<0?'새로운 최고 기록!':recordText(old);
   byId('record-detail').textContent='완벽 회피 '+record.perfect+'/30 · 최장 연속 '+record.streak+'회';
   if(isHighScore(record))byId('record-detail').textContent+=' · 관장의 인정 달성!';
   byId('promotion-note').textContent=earnsPromotion(record)?level<3?LEVELS[level+1].name+' 단계 해금!':'최고 단계 클리어!':'같은 공격 순서로 다시 연습할 수 있어요';
   byId('promote-button').hidden=level===3||progress.unlocked<=level||!!challenge;
+  byId('promote-ad-disclosure').hidden=byId('promote-button').hidden||snapshot.knockedOut||!['loading','ready'].includes(stagePhase);
   byId('promote-button').textContent=level<3?'다음 난이도 도전 · '+LEVELS[level+1].name:'';
   byId('rank-note').textContent=challenge?'기록 검증 중…':storageNote||'난이도별 최고 기록은 이 브라우저에 저장됩니다.';
   if(challenge){const submitted=challenge;submitChallenge(submitted,inputs).then(r=>{if(challenge===submitted)byId('rank-note').textContent=standingText(r);}).catch(()=>{if(challenge===submitted)byId('rank-note').textContent='비교 기록 제출 실패 · 개인 기록은 유지됩니다.';});}
@@ -203,7 +217,8 @@ function showResults(snapshot) {
   const rematch = getRematchReview(snapshot.results, speed, true, {dialogue, event:snapshot.runId, knockedOut:snapshot.knockedOut === true,totalPunches:30});
   if (snapshot.knockedOut && soundEnabled && !paused && !document.hidden) {stopAudio(); sounds.knockout.currentTime=0; void sounds.knockout.play().catch(()=>{});}
   if (totals.HIT === 0 && totals.PERFECT >= 24 && soundEnabled) {sounds.recognition.currentTime=0; void sounds.recognition.play().catch(()=>{});}
-  renderCoach('coach-result', rematch.reaction);
+  renderViralResult({record,previousBest:old,comparison,results:snapshot.results});
+  document.querySelector('.result-content').scrollTop=0;
   byId('rematch-title').textContent = rematch.focusTitle;
   byId('rematch-body').textContent = rematch.focusBody;
   byId('retry-label').textContent = productRuntime.requiresReward?'광고 보고 다시 도전':'다시 도전';
@@ -238,6 +253,7 @@ function start(seed, selectedSpeed = LEVELS[level].rate, daily = null, source='l
   if (!ready || (connecting && !daily) || (started && !session.snapshot().sessionCompleted)) return;
   requestVersion++;byId('records-card').hidden=true;
   if(!daily && level>progress.unlocked)return;
+  const revisitData=revisitPromptEventData(!started&&!daily&&!byId('intro-card').hidden?currentRevisitPrompt():undefined);
   const returning = started;
   challenge=daily;inputs=[];if(daily)level=daily.level;
   dialogue.beginRound();
@@ -252,7 +268,7 @@ function start(seed, selectedSpeed = LEVELS[level].rate, daily = null, source='l
   document.querySelector('.controls').hidden = false;
   buttons.forEach(button => { button.hidden = ['DUCK','STEP_IN'].includes(button.dataset.btn) && level !== 3; button.disabled = button.hidden; button.classList.remove('pressed'); });
   session.start({ leadInMs: daily?.leadInMs ?? (returning ? 800 : 2000) * speed });
-  productRound=productRuntime.startRound({level,source});
+  productRound=productRuntime.startRound({level,source,...revisitData});
   focusButton('pause-button'); requestFrame();
 }
 
@@ -297,7 +313,7 @@ byId('mode-button').addEventListener('click', () => {
   clock.pause(); started = false; paused = false; showingResults = false; playedResults = 0; acceptedAt.clear();
   session = new PreviewTenPunchSession(clock, Object.fromEntries(Object.entries(assets).map(([id, asset]) => [id, asset.source.id])), {seed:session.snapshot().seed,maxHits:5,survivalLevel:level});
   byId('result-card').classList.remove('visible'); byId('intro-card').hidden=false; byId('pause-button').hidden=true;
-  document.querySelector('.controls').hidden=true; stopAudio(); focusButton('begin-button'); requestFrame();
+  document.querySelector('.controls').hidden=true; stopAudio(); focusButton('begin-button'); requestFrame();trackLanding();
 });
 byId('retry-button').addEventListener('click', () => { if(challenge){void beginDaily();return;} const snapshot = session.snapshot(); requestPlay(getRematchReview(snapshot.results, speed, true).replaySameSeed ? snapshot.seed : (snapshot.seed + 1) >>> 0); });
 byId('new-pattern-button').addEventListener('click', () => {if(challenge){challenge=null;level=Math.min(level,progress.unlocked);}requestPlay((session.snapshot().seed + 1) >>> 0,LEVELS[level].rate);});
@@ -308,7 +324,7 @@ byId('start-seed-button').addEventListener('click', () => {
 });
 
 async function init() {
-  if(qaAds)qaAds.stage.prepare(()=>{});
+  if(qaAds)qaAds.stage.prepare(state=>{stagePhase=state.phase;const note=byId('promote-ad-disclosure');if(note)note.hidden=byId('promote-button').hidden||session.snapshot().knockedOut||!['loading','ready'].includes(stagePhase);});
   renderLevels();renderCoach('coach-intro', COACH_INTRO);
   for (const file of ['lead-jab.json', 'rear-straight.json', 'lead-hook.json']) {
     const response = await fetch(`/src/game/assets/motion/${file}`);
@@ -320,7 +336,7 @@ async function init() {
   const rawSeed = new URLSearchParams(location.search).get('seed');
   session = new PreviewTenPunchSession(clock, Object.fromEntries(Object.entries(assets).map(([id, asset]) => [id, asset.source.id])),
     { maxHits:5, survivalLevel:level, seed: rawSeed !== null && Number.isInteger(Number(rawSeed)) ? Number(rawSeed) : Date.now() >>> 0 });
-  ready=true;byId('begin-button').disabled=false;byId('daily-button').disabled=false;
+  ready=true;byId('begin-button').disabled=false;byId('daily-button').disabled=false;trackLanding();
   byId('seed-input').value = String(session.snapshot().seed);
   requestFrame();
   if (debug) window.__p0Preview = { runtime:productRuntime, snapshot: () => session.snapshot(), handleInput, retrySameSeed: () => requestPlay(session.snapshot().seed), startSeed: start };
