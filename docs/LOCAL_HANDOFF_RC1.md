@@ -10,10 +10,9 @@
 git fetch origin
 git worktree add ../boxing-cloud-rc1 origin/cloud/v1-device-rc1
 cd ../boxing-cloud-rc1
-gh release download v1-device-rc1-20261018 --repo cj84368436-spec/boxing-reaction-app --pattern 'boxing-talent-test-v1-device-rc1.ait' --dir device-build
 ```
 
-AIT는 GitHub **Draft Release** 첨부 파일이다. 해당 저장소의 draft release 접근 권한이 있는 계정으로 `gh` 인증이 필요하다. 소스는 브랜치에서 읽고, AIT는 release에서 받는다. release 이름의 draft는 정식 출시가 아니라 전달용 보관 상태다.
+AIT도 이 브랜치에 포함되어 있다. 경로는 `device-builds/v1-device-rc1/boxing-talent-test-v1-device-rc1.ait`이다. Git 저장소를 받으면 파일이 함께 내려온다. Git LFS나 별도 Release 다운로드·gh 인증은 필요 없다. GitHub Release 첨부 서버의 인증 오류로 빈 draft를 제거하고 저장소 내 직접 전달로 전환했다.
 
 검증 대상:
 
@@ -21,7 +20,7 @@ AIT는 GitHub **Draft Release** 첨부 파일이다. 해당 저장소의 draft r
 - 크기: 51,298,578 bytes
 - SHA-256: `32c6c34eb3b9f72b109a968a1540b6ffcb1e21fe2be2cd04d7990121770368b7`
 
-Windows에서는 `Get-FileHash device-build/boxing-talent-test-v1-device-rc1.ait -Algorithm SHA256`, macOS/Linux에서는 `shasum -a 256 device-build/boxing-talent-test-v1-device-rc1.ait`로 확인한다. 이름만 같은 다른 파일을 사용하지 않는다. 이 파일을 받았다면 불필요하게 재빌드하지 않는다.
+Windows에서는 `Get-FileHash device-builds/v1-device-rc1/boxing-talent-test-v1-device-rc1.ait -Algorithm SHA256`, macOS/Linux에서는 `shasum -a 256 device-builds/v1-device-rc1/boxing-talent-test-v1-device-rc1.ait`로 확인한다. 이름만 같은 다른 파일을 사용하지 않는다. 이 파일을 받았다면 불필요하게 재빌드하지 않는다.
 
 ## 포함된 구현과 검증
 
